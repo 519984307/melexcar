@@ -1,0 +1,10 @@
+
+Component battery_agent
+{
+    Communications
+    {
+    };
+	language Python;
+	options dsr;
+};
+

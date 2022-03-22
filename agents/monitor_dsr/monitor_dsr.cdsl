@@ -1,0 +1,13 @@
+import "JoystickAdapter.idsl";
+
+Component monitor_dsr
+{
+    Communications
+    {
+	    subscribesTo JoystickAdapter;
+    };
+	language Cpp11;
+        gui Qt(QMainWindow);
+        options dsr;
+};
+

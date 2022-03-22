@@ -1,0 +1,16 @@
+import "Laser.idsl";
+import "CameraRGBDSimple.idsl";
+
+Component agent_right_camera
+{
+    Communications
+    {
+        implements Laser, CameraRGBDSimple;
+    };
+    language Cpp11;
+    gui Qt(QMainWindow);
+    options dsr;
+};
+
+
+

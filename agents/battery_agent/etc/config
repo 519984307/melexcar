@@ -1,0 +1,13 @@
+uart_port = /dev/ttyUSB0
+
+baudrate = 19200
+timeout = 5
+
+
+Ice.Warn.Connections=0
+Ice.Trace.Network=0
+Ice.Trace.Protocol=0
+Ice.MessageSizeMax=20004800
+
+
+

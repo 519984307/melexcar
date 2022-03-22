@@ -1,0 +1,29 @@
+CommonBehavior.Endpoints=tcp -p 10000
+
+CameraRGBDSimple.Endpoints=tcp -p 28350
+Laser.Endpoints=tcp -p 14520
+agent_id = 12 # Change id
+agent_name = agent_left_camera
+tree_view = false
+graph_view = true
+2d_view = false
+3d_view = false
+
+serial_left = 108222250685
+display_depth = false
+display_rgb = false
+display_laser = false
+compressed = true
+view = true
+
+max_up_height = -1.0#-0,9 #-0,9  # meters
+max_down_height = 1.0# 0,5#-0.1
+
+#Ice.MessageSizeMax=20004800
+
+InnerModelPath = innermodel.xml
+
+Ice.Warn.Connections=0
+Ice.Trace.Network=0
+Ice.Trace.Protocol=0
+Ice.MessageSizeMax=20004800

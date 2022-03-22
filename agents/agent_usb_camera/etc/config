@@ -1,0 +1,20 @@
+CommonBehavior.Endpoints=tcp -p 10000
+
+agent_id = 15 # Change id
+agent_name = agent_usb_camera
+tree_view = false
+graph_view = true
+2d_view = false
+3d_view = false
+#Ice.MessageSizeMax=20004800
+
+InnerModelPath = innermodel.xml
+
+device = /dev/video6
+display = false
+compressed = true
+
+Ice.Warn.Connections=0
+Ice.Trace.Network=0
+Ice.Trace.Protocol=0
+Ice.MessageSizeMax=20004800

@@ -1,0 +1,10 @@
+Component agent_control
+{
+    Communications
+    {   
+    };
+    language Cpp11;
+    gui Qt(QMainWindow);
+    options dsr;
+};
+

@@ -1,0 +1,13 @@
+
+hostname = google.com
+max_melex_adv = 2650
+max_melex_brake = 9000
+wheel_center = 12000
+
+Ice.Warn.Connections=0
+Ice.Trace.Network=0
+Ice.Trace.Protocol=0
+Ice.MessageSizeMax=20004800
+
+
+

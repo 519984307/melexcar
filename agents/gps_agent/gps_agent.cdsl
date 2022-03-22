@@ -1,0 +1,9 @@
+
+Component gps_agent
+{
+    Communications
+    {
+    };
+	language Python;
+	options dsr;
+};

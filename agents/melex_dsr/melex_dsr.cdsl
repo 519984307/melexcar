@@ -1,0 +1,9 @@
+
+Component melex_dsr
+{
+    Communications
+    {
+    };
+	language Python;
+	options dsr;
+};

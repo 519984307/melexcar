@@ -1,0 +1,22 @@
+import "JoystickAdapter.idsl";
+import "BatteryStatus.idsl";
+import "CameraRGBDSimple.idsl";
+import "FullPoseEstimationPub.idsl";
+import "GpsUblox.idsl";
+import "Laser.idsl";
+import "Radar.idsl";
+import "CameraSimple.idsl";
+import "OdometryMelex.idsl";
+
+Component agent_bridge
+{
+    Communications
+    {
+        implements BatteryStatus, FullPoseEstimationPub, CameraRGBDSimple, GpsUblox, Laser, Radar, CameraSimple, OdometryMelex;
+    };
+    language Cpp11;
+    gui Qt(QMainWindow);
+    options dsr;
+   
+};
+

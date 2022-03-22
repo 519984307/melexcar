@@ -1,0 +1,39 @@
+num_gps = 2
+theta = 0.24906021553765
+N_average = 3
+
+# X-Y origin coordinate
+
+originX = 0
+originY = 0
+
+# Initial UTM position & orientation
+
+fixedX= -371895.97221695725 #-371886.67816326916
+fixedY = 4417962.616456918 #4417967.8278194275
+
+fixed_alpha = 180
+
+
+name_0 = gps_rear
+ip_0 = 192.168.50.154
+port_0 = 2947
+tx_0 = 0
+ty_0 = 0
+tz_0 = 0
+
+name_1 = gps_front
+ip_1 = 192.168.50.121
+port_1 = 2947
+tx_1 = 0.1
+ty_1 = 0.1
+tz_1 = 0.2
+
+
+Ice.Warn.Connections=0
+Ice.Trace.Network=0
+Ice.Trace.Protocol=0
+Ice.MessageSizeMax=20004800
+
+
+
