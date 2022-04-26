@@ -17,6 +17,7 @@
  *    along with RoboComp.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "specificworker.h"
+#include "cppitertools/sliding_window.hpp"
 
 /**
 * \brief Default constructor
@@ -59,6 +60,14 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 	graph_view = params["graph_view"].value == "true";
 	qscene_2d_view = params["2d_view"].value == "true";
 	osg_3d_view = params["3d_view"].value == "true";
+
+    bumper = (params["bumper"].value == "true") or (params["bumper"].value == "True");
+    stop_threshold = stoi(params["stop_distance"].value);
+    first_threshold = stoi(params["first_threshold"].value);
+    second_threshold = stoi(params["second_threshold"].value);
+    trim = stoi(params["trim"].value);
+    first_threshold_velocity = stof(params["first_threshold_velocity"].value);
+    second_threshold_velocity = stof(params["second_threshold_velocity"].value);
 
 	return true;
 }
@@ -112,43 +121,107 @@ void SpecificWorker::initialize(int period)
 		this->Period = period;
 		timer.start(Period);
 	}
-
+    if(auto robot_node = G->get_node(robot_name); robot_node.has_value()) {
+        G->add_or_modify_attrib_local<robot_ref_brake_speed_att>(robot_node.value(), 1500);
+        G->update_node(robot_node.value());
+    }
 }
 
 void SpecificWorker::compute()
 {
-    check_gps_connection();
+    //check_gps_connection();
     try{
-        set_car_movement();
-//        std::cout << "SetSpeed_OK" << "adv="<<adv_speed<<" rot="<<rot_speed<<std::endl;
+        if (bumper) {
+            bumper_robot();
+            cout << "ADV" << adv_speed <<"  "<< adv_speed_filter<<endl;
+            set_car_movement(adv_speed_filter, rot_speed_filter,brake_speed);
+        std::cout << "SetSpeed_OK" << "adv="<<adv_speed<<" rot="<<rot_speed<<"brake:"<<brake_speed<<std::endl;
+        }
+        else
+            set_car_movement(adv_speed, rot_speed, brake_speed);
     }catch(const Ice::Exception &e) { std::cout << "SetSpeed_OFF" << std::endl;}
 
 
 }
 
-void SpecificWorker::set_car_movement()
+void SpecificWorker::set_car_movement(float adv, float rot, int brake)
 {
     if(auto robot_node = G->get_node(robot_name); robot_node.has_value())
     {
-        //int x = system("ping -c1 -s1 192.168.50.22  > /dev/null 2>&1");
-        //if ((x!=0) or (gps_check == false )){
-        if ((gps_check == false )){
+        /*if ((gps_check == false )){
             cout<<"ping failed or wrong gps dignal"<<endl;
-            adv_speed = 0;
-            rot_speed = 0;
             G->add_or_modify_attrib_local<robot_ref_adv_speed_att>(robot_node.value(), (float) 0);
             G->add_or_modify_attrib_local<robot_ref_rot_speed_att>(robot_node.value(), (float) 0);
             G->update_node(robot_node.value());
-        }else {
-            cout << "avanceeeeee" << adv_speed << endl;
-            G->add_or_modify_attrib_local<robot_ref_adv_speed_att>(robot_node.value(), (float) adv_speed);
-            G->add_or_modify_attrib_local<robot_ref_rot_speed_att>(robot_node.value(), (float) rot_speed);
+        }else {*/
+            cout << "avanceeeeee" << adv << endl;
+            G->add_or_modify_attrib_local<robot_ref_adv_speed_att>(robot_node.value(), (float) adv);
+            G->add_or_modify_attrib_local<robot_ref_rot_speed_att>(robot_node.value(), (float) rot);
+            G->add_or_modify_attrib_local<robot_ref_brake_speed_att>(robot_node.value(), (int) brake);
             G->update_node(robot_node.value());
-        }
+
     }
     else qWarning() << __FUNCTION__ << "No robot node found";
 
 }
+
+
+
+
+
+void SpecificWorker::bumper_robot() {
+    try {
+        if (auto robot_node = G->get_node(robot_name); robot_node.has_value()) {
+            if (auto laser_node = G->get_node(laser_front_name); laser_node.has_value()) {
+                if (auto distances_front = G->get_attrib_by_name<laser_dists_att>(laser_node.value()); distances_front.has_value()) {
+                    auto distances_front_laser = distances_front.value().get();
+
+                    if (adv_speed >= 0) {
+                        if (distances_front_laser[0] < 200)
+                            distances_front_laser[0] = 200;
+                        for (auto &&window_front_laser: iter::sliding_window(distances_front_laser, 2)) {
+                            if (window_front_laser[1] < 200)
+                                window_front_laser[1] = window_front_laser[0];
+                        }
+                        int limit = distances_front_laser.size() / trim;
+                        std::sort(distances_front_laser.begin() + limit, distances_front_laser.end() - limit,
+                                  [](float a, float b) { return a < b; });
+                        float minValue_front_laser = distances_front_laser[limit];
+                        if (minValue_front_laser < stop_threshold) {
+                            //cout << "frontal:" << minValue_front_laser;
+                            adv_speed_filter = 0;
+                            rot_speed_filter = 0;
+                            brake_speed=5000;
+
+                        } else if (minValue_front_laser < second_threshold) {
+                            adv_speed_filter = adv_speed * second_threshold_velocity;
+                            brake_speed=2000;
+
+                        } else if (minValue_front_laser < first_threshold) {
+                            adv_speed_filter = adv_speed * first_threshold_velocity;
+                        }
+                        else{
+                            adv_speed_filter = adv_speed;
+                            brake_speed=1500;
+                        }
+
+                    }
+
+                    rot_speed_filter = rot_speed;
+                }
+            }
+        }} catch (const Ice::Exception &e) {
+            std::cout << "Error Laser_back" << std::endl;
+            active_laser_front = false;
+        }
+
+        //LASER_BUMPER
+
+    }
+
+
+
+
 
 void SpecificWorker::check_gps_connection()
 {

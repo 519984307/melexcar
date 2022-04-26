@@ -325,7 +325,7 @@ RoboCompLaser::TLaserData SpecificWorker::compute_laser(const Camera_Map &cam_ma
         else
         {
             if(i>0) ldata[i].dist = ldata[i - 1].dist;  // link to the adjacent
-            else ldata[i].dist = 200;
+            else ldata[i].dist = 10000;
         }
         i++;
     }

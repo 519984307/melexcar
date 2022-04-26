@@ -19,6 +19,7 @@
 #include "specificworker.h"
 #include "cppitertools/zip.hpp"
 #include <cppitertools/range.hpp>
+#include "cppitertools/sliding_window.hpp"
 
 /**
 * \brief Default constructor
@@ -117,10 +118,10 @@ void SpecificWorker::initialize(int period)
 
 
         double ra = 2000.0;
-        double rad_pas = (M_PI/360.0);
+        double rad_pas = (M_PI/180.0);
         cout << "RAD_PAS " << rad_pas << endl;
 
-        for (int i=-360; i<360; i++)
+        for (int i=-180; i<=180; i++)
         {
             double x = ra * sin(rad_pas*i);
             double y = ra * cos(rad_pas*i);
@@ -144,10 +145,10 @@ void SpecificWorker::initialize(int period)
 
         //points around melex's center
         float r = 1000.0;
-        for (int i=0; i<30; i++)
+        for (int i=1; i<30; i++)
         {
-            auto factor = exp(0.1*i)*i;
-            auto dist = factor * r;
+            //auto factor = exp(0.1*i)*i;
+            auto dist = i * r;
             std::string str1 = std::to_string(dist);
             std::string str = "Radius: ";
             std::string com = str +str1;
@@ -183,14 +184,14 @@ void SpecificWorker::initialize(int period)
 		timer.start(Period);
         try {
 
-            if (auto laser_front_node = G->get_node(laser_front_name); laser_front_node.has_value())
-                front_laser_id = laser_front_node->id();
-            if (auto laser_back_node = G->get_node(laser_back_name); laser_back_node.has_value())
-                back_laser_id = laser_back_node->id();
-            if (auto laser_right_node = G->get_node(laser_right_name); laser_right_node.has_value())
-                right_laser_id = laser_right_node->id();
-            if (auto laser_left_node = G->get_node(laser_left_name); laser_left_node.has_value())
-                left_laser_id = laser_left_node->id();
+            if (auto laser_node = G->get_node("laser_nivel_0"); laser_node.has_value())
+                laser1_id = laser_node->id();
+            if (auto laser_node = G->get_node("laser_nivel_1"); laser_node.has_value())
+                laser2_id = laser_node->id();
+            if (auto laser_node = G->get_node("laser_nivel_2"); laser_node.has_value())
+                laser3_id = laser_node->id();
+            if (auto laser_node = G->get_node("laser_nivel_3"); laser_node.has_value())
+                laser4_id = laser_node->id();
         }
         catch(const std::exception &e) { qFatal("Laser nodes Missing at initialize"); }
 
@@ -199,16 +200,23 @@ void SpecificWorker::initialize(int period)
 
 void SpecificWorker::compute()
 {
-    QPolygonF laserpoly;
+    QPolygonF laserpoly,laserpoly1,laserpoly2,laserpoly3;
     QPolygonF lasercomplete;
 
-    read_laser(front_laser_id, laser_front_name, laserpoly); // 0-179
-    read_laser(right_laser_id, laser_right_name, laserpoly); // 0-86
-    read_laser(back_laser_id, laser_back_name, laserpoly); // 0 - 86
-    read_laser(left_laser_id, laser_left_name, laserpoly); // 0 - 86
+    read_laser(laser1_id, laser_front_name, laserpoly); // 0-179
+    read_laser(laser2_id, laser_right_name, laserpoly1); // 0-86
+    read_laser(laser3_id, laser_back_name, laserpoly2); // 0 - 86
+    read_laser(laser4_id, laser_left_name, laserpoly3); // 0 - 86
+    QStringView Green = QStringView(QString("LightGreen"));
+    QStringView Red = QStringView(QString("Red"));
+    QStringView Blue = QStringView(QString("Blue"));
+    QStringView Yellow = QStringView(QString("Yellow"));
+    //laser_integrator(laserpoly, lasercomplete);
+    draw_laser(laserpoly,Green);
+    draw_laser(laserpoly1,Red);
+    draw_laser(laserpoly2,Blue);
+    draw_laser(laserpoly3,Yellow);
 
-    laser_integrator(laserpoly, lasercomplete);
-    draw_laser(lasercomplete);
     //read_battery();
     //read_cords();
     //read_odometry();
@@ -243,7 +251,6 @@ void SpecificWorker::read_laser(std::uint64_t id, const std::string laser_name, 
                      if (auto aux = inner->transform(robot_name, Eigen::Vector3d(x, y, 0.f),
                                                      laser_name); aux.has_value()){
                          laserpoly << QPointF(aux.value().x(), aux.value().y());
-                        float ang = atan2(aux.value().y() , aux.value().x());
 //                         cout << "ANGULO" << ang << endl;
                  }
                  }
@@ -253,14 +260,10 @@ void SpecificWorker::read_laser(std::uint64_t id, const std::string laser_name, 
     }
 }
 
-void SpecificWorker::draw_laser(QPolygonF &laserpoly)
+void SpecificWorker::draw_laser(QPolygonF &laserpoly, QStringView colour)
 {
     static QGraphicsItem *laser_polygon = nullptr;
-
-    if (laser_polygon != nullptr)
-        local_view->scene.removeItem(laser_polygon);
-
-    QColor color("LightGreen");
+    QColor color(colour);
     color.setAlpha(40);
     laser_polygon = local_view->scene.addPolygon(laserpoly, QPen(QColor("DarkGreen"), 30), QBrush(color));
     laser_polygon->setZValue(3);
@@ -277,21 +280,22 @@ void SpecificWorker::laser_integrator(QPolygonF laserpoly, QPolygonF &lasercompl
     int last_ang = 1000;
     double last_distance = 100000.0;
     for (std::set<std::pair<double, double>>::iterator it=hor_ang.begin(); it!=hor_ang.end(); ++it) {
-        auto angulo = round((it->first *-360) /-M_PI);
+        auto angulo = (int)(round)((it->first *180) /M_PI);
         try{
             if (angulo == last_ang) last_distance = min(it->second, last_distance);
             else last_distance = it->second;
             laser_map.at(angulo) = last_distance;
             last_ang = angulo;
-            }catch(const std::exception &e) { cout << "bad insert"<< endl; }
+        }catch(const std::exception &e) { cout << "bad insert"<< endl; }
 
-        }
+    }
     for (auto &bin : laser_map) {
-        auto angulo_norm = (bin.first * -180) / -360;
+        auto angulo_norm = (bin.first );
         float x = bin.second * sin((angulo_norm*M_PI)/180 );
         float y = bin.second * cos((angulo_norm*M_PI)/180 );
-            lasercomplete << QPointF(x, y);
-        }
+        lasercomplete << QPointF(x, y);
+    }
+
 
 
 }

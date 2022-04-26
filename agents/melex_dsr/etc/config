@@ -1,5 +1,5 @@
 
-hostname = google.com
+hostname = 192.168.50.22
 max_melex_adv = 2650
 max_melex_brake = 9000
 wheel_center = 12000

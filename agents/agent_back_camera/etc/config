@@ -16,8 +16,8 @@ display_laser = false
 compressed = true
 view = true
 
-max_up_height = -1.0#-0,9  # meters
-max_down_height = 1.0# -0.1
+max_up_height = -2.0#-0,9  # meters
+max_down_height = 1,5 # -0.1
 
 #Ice.MessageSizeMax=20004800
 

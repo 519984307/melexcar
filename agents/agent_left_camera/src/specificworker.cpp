@@ -134,7 +134,6 @@ void SpecificWorker::initialize(int period)
         Eigen::Transform<float, 3, Eigen::Affine> left_depth_extrinsics;;
         left_depth_extrinsics = left_tr;
         left_depth_extrinsics.rotate(left_m);
-        std::cout << "left transform " << left_depth_extrinsics.matrix() << std::endl;
         cam_map[serial_left] = std::make_tuple(left_pipe, left_depth_intr, left_depth_extrinsics,  rs2::frame(), rs2::points(), rs2::frame());
         print_camera_params(serial_left, profile_left);
         qInfo() << __FUNCTION__ << " left-camera started";
@@ -296,13 +295,12 @@ RoboCompLaser::TLaserData SpecificWorker::compute_laser(const Camera_Map &cam_ma
      //   cout << "/////////////// adios" << FLOOR_DISTANCE_MINUS_OFFSET<< endl;
         for (size_t i = 0; i < points.size(); i++)
         {
-            if(vertices[i].z >= 0.0) {
+            if(vertices[i].z >= 0.6) {
             //if(vertices[i].z >= 0.3 ) {
                 auto to_point = extrin * Eigen::Vector3f{vertices[i].x, vertices[i].y, vertices[i].z};
                 const float &xv = to_point[0];
                 const float &yv = to_point[1];
                 const float &zv = to_point[2];
-
 //                cout << "YV: " << yv << endl;
 //                cout << "MAX UP HEIGHT: " << consts.max_up_height << endl;
 //                cout << "MAX DOWN HEIGHT: " << consts.max_down_height << endl;
@@ -312,11 +310,14 @@ RoboCompLaser::TLaserData SpecificWorker::compute_laser(const Camera_Map &cam_ma
                     float hor_angle = -atan2(xv, zv);
                     int angle_index = (int) ((consts.MAX_LASER_BINS / consts.TOTAL_HOR_ANGLE) * hor_angle +
                                              (consts.MAX_LASER_BINS / 2.f));
+                    cout<<angle_index<<endl;
                     if (angle_index >= consts.MAX_LASER_BINS or angle_index < 0) continue;
                     hor_bins[angle_index].emplace(std::make_tuple(xv, yv, zv));
+
                 }
             }
         }
+
     }
     RoboCompLaser::TLaserData ldata(consts.MAX_LASER_BINS);
     uint i = 0;
@@ -329,12 +330,14 @@ RoboCompLaser::TLaserData SpecificWorker::compute_laser(const Camera_Map &cam_ma
         {
             const auto &[X, Y, Z] = *bin.cbegin();
             ldata[i].dist = sqrt(X * X + Y * Y + Z * Z)*1000;
+            cout<< "DISTANCIA" << ldata[i].dist<<endl;
+            cout<< "ANG" << ldata[i].angle<<endl;
 //            cout << "//////// " << ldata[i].dist << endl;
         }
         else
         {
             if(i>0) ldata[i].dist = ldata[i - 1].dist;  // link to the adjacent
-            else ldata[i].dist = 200;
+            else ldata[i].dist = 10000;
         }
         i++;
     }

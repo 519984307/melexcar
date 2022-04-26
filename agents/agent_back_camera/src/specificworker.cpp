@@ -38,6 +38,7 @@ SpecificWorker::~SpecificWorker()
 
 bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 {
+    //std::setlocale(LC_NUMERIC,"C");
     serial_back = params["serial_back"].value;
     display_depth = (params["display_depth"].value == "true") or (params["display_depth"].value == "True");
     display_rgb = (params["display_rgb"].value == "true") or (params["display_rgb"].value == "True");
@@ -127,7 +128,7 @@ void SpecificWorker::initialize(int period)
         Eigen::Translation<float, 3> back_tr(0.0, 0.0, 0.0);
         // Eigen::Translation<float, 3> back_tr(0.0963, 0., 0.0578); // dos cámaras?
         Eigen::Matrix3f back_m;
-        back_m = Eigen::AngleAxisf(-0.610865, Eigen::Vector3f::UnitX())
+        back_m = Eigen::AngleAxisf(-0.610865, Eigen::Vector3f::UnitX())  //-0.610865
                   * Eigen::AngleAxisf(0.0, Eigen::Vector3f::UnitY())  //60 degrees
                   * Eigen::AngleAxisf(0.0, Eigen::Vector3f::UnitZ());
         Eigen::Transform<float, 3, Eigen::Affine> back_depth_extrinsics;;
@@ -168,6 +169,8 @@ void SpecificWorker::compute()
     my_mutex.lock();
         virtual_frame=v_f.clone();
     my_mutex.unlock();
+
+    cout<< consts.max_down_height<<endl;
 
     if(compressed)
     {
@@ -293,14 +296,15 @@ RoboCompLaser::TLaserData SpecificWorker::compute_laser(const Camera_Map &cam_ma
         const rs2::vertex *vertices = points.get_vertices();
         float FLOOR_DISTANCE_MINUS_OFFSET =  extrin.translation().x() * 0.9;  // X+ axis points downwards since the camera is rotated
         for (size_t i = 0; i < points.size(); i++)
-        {
-            if(vertices[i].z >= 0.3) {
+
+            if(vertices[i].z >= 0.7) {
                 auto to_point = extrin * Eigen::Vector3f{vertices[i].x, vertices[i].y, vertices[i].z};
                 const float &xv = to_point[0];
                 const float &yv = to_point[1];
                 const float &zv = to_point[2];
-                if ((yv < consts.max_down_height) and
-                    (yv > consts.max_up_height))  // central band - positive x downwards
+
+                if (yv < consts.max_down_height) //and
+                    //(yv > consts.max_up_height))  // central band - positive x downwards
                 {
                     float hor_angle = -atan2(xv, zv);
                     int angle_index = (int) ((consts.MAX_LASER_BINS / consts.TOTAL_HOR_ANGLE) * hor_angle +
@@ -310,7 +314,7 @@ RoboCompLaser::TLaserData SpecificWorker::compute_laser(const Camera_Map &cam_ma
                 }
             }
         }
-    }
+
     RoboCompLaser::TLaserData ldata(consts.MAX_LASER_BINS);
     uint i = 0;
     for (auto &bin : hor_bins)
@@ -327,7 +331,7 @@ RoboCompLaser::TLaserData SpecificWorker::compute_laser(const Camera_Map &cam_ma
         else
         {
             if(i>0) ldata[i].dist = ldata[i - 1].dist;  // link to the adjacent
-            else ldata[i].dist = 200;
+            else ldata[i].dist = 10000;
         }
         i++;
     }

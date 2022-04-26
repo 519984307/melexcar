@@ -74,5 +74,6 @@ const std::string has_type = "has";
 const std::string in_type_name = "in";
 const std::string attention_action_type_name = "attention_action";
 const std::string goto_action_type_name = "goto_action";
+const std::string RT_type_name = "RT";
 
 #endif

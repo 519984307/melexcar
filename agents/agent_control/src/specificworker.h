@@ -70,7 +70,7 @@ class SpecificWorker : public GenericWorker
         bool osg_3d_view;
         QSize size;
         LeafLetGPSViewer *map;
-        std::uint64_t front_laser_id, left_laser_id, right_laser_id, back_laser_id;
+        std::uint64_t laser1_id, laser2_id, laser3_id, laser4_id;
 
 
         // laser
@@ -94,7 +94,7 @@ class SpecificWorker : public GenericWorker
         inline QPointF e2q(const Eigen::Vector3d &p)const {
             return QPointF(p.x(), p.y());
         }
-        void draw_laser(QPolygonF &poly);
+        void draw_laser(QPolygonF &poly, QStringView color);
 
         void read_battery();
         void read_cords();

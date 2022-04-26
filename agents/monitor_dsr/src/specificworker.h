@@ -47,12 +47,15 @@ public:
 
     RoboCompJoystickAdapter::TData joydata;
     float adv_speed , rot_speed, adv_speed_filter , rot_speed_filter ;
+    int brake_speed = 1500;
+    void bumper_robot();
+    bool active_laser_front;
 
 public slots:
 	void compute();
 	int startup_check();
 	void initialize(int period);
-    void set_car_movement();
+    void set_car_movement(float adv, float rot, int brake);
     void check_gps_connection();
 
 private:
@@ -65,6 +68,13 @@ private:
     float min_lat = 39.4779;
     float max_long = -6.3385;
     float min_long = -6.3453;
+    bool bumper;
+    int stop_threshold;
+    int first_threshold;
+    int second_threshold;
+    int trim;
+    float first_threshold_velocity;
+    float second_threshold_velocity;
 	//DSR params
 	std::string agent_name;
 	int agent_id;

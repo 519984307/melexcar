@@ -29,6 +29,7 @@ from pyModbusTCP.client import ModbusClient
 import serial
 sys.path.append('/opt/robocomp/lib')
 console = Console(highlight=False)
+import json
 
 from pydsr import *
 
@@ -107,12 +108,13 @@ class SpecificWorker(GenericWorker):
         self.rotation = 0
 
         self.brake = 0
+        self.atras = 1
 
         while not self.ROVER.is_open():
             print("waiting to connect melex")
             self.ROVER.open()
 
-        self.ROVER.write_single_register(self.MAP_CAMBIO, 0)
+        self.ROVER.write_single_register(self.MAP_CAMBIO, 1)
         self.ROVER.write_single_register(self.MAP_SEGURIDAD, 1)
         self.ROVER.write_single_register(self.MAP_FRENO, 0)
 
@@ -121,24 +123,30 @@ class SpecificWorker(GenericWorker):
 
     @QtCore.Slot()
     def compute(self):
-        print('SpecificWorker.compute...')
-        response = os.system("ping -c 1 " + self.hostname)
-
-        # and then check the response...
-        if response == 0:
-            print(self.hostname, 'is up!')
-            self.set_movement()
-        else:
-            print(self.hostname, 'down')
-            self.ROVER.write_single_register(self.MAP_SEGURIDAD, 0)
-        self.read_odometry()
-        ####################################### PROBAR ###############################################
-        # if self.ROVER.read_holding_registers(8) == 0 and self.advance < 0:
-        #     self.ROVER.write_single_register(self.MAP_CAMBIO, 2)
-        # elif self.ROVER.read_holding_registers(8) == 0 and self.advance >0:
-        #     self.ROVER.write_single_register(self.MAP_CAMBIO, 1)
+        # print('SpecificWorker.compute...')
+        # response = os.system("ping -c 1 " + self.hostname)
+        # # and then check the response...
+        # print("MARCHA", self.ROVER.read_holding_registers(3))
+        # if response == 0:
+        #     print(self.ROVER.read_holding_registers(self.MAP_SEGURIDAD))
+        #     if self.ROVER.read_holding_registers(self.MAP_SEGURIDAD) == [0]:
+        #         self.ROVER.write_single_register(self.MAP_SEGURIDAD, 1)
+        #         print(self.hostname, 'is up!')
+        #     self.set_movement()
         # else:
-        #     self.ROVER.write_single_register(self.MAP_CAMBIO, 0)
+        #     print(self.hostname, 'down')
+        #     self.ROVER.write_single_register(self.MAP_SEGURIDAD, 0)
+        #     conex = False
+        # self.read_odometry()
+        # ####################################### PROBAR ###############################################
+        # if self.ROVER.read_holding_registers(8) == [0] and self.advance < 0:
+        #     self.ROVER.write_single_register(self.MAP_CAMBIO, 2)
+        #     self.atras = -1
+        # elif self.ROVER.read_holding_registers(8) == [0] and self.advance > 0:
+        #     self.ROVER.write_single_register(self.MAP_CAMBIO, 1)
+        #     self.atras = 1
+        self.send_json()
+
 
 
 
@@ -155,31 +163,56 @@ class SpecificWorker(GenericWorker):
             odometry_node.attrs['odometry_vel'] = Attribute(float(velocidad_reg1[0]), self.agent_id)
             odometry_node.attrs['odometry_steer'] = Attribute(float(rad_giro), self.agent_id)
         self.g.update_node(odometry_node)
+    def send_json(self):
+        robot = self.g.get_node('robot')
+        bateria = self.g.get_node('battery')
+        gps = self.g.get_node('gps')
+        odometry = self.g.get_node("odometry")
+        nombre = "melexcar"
+        if robot:
+            ocupado = robot.attrs['robot_occupied'].value
+        else:
+            ocupado= "error"
+        if bateria:
+            carga = bateria.attrs['battery_load'].value
+        else:
+            carga ="Error"
+        if gps:
+            latitud = gps.attrs["gps_latitude"].value
+            longitud = gps.attrs["gps_longitude"].value
+            UTMx = gps.attrs["gps_UTMx"].value
+            UTMy = gps.attrs["gps_UTMy"].value
+        else:
+            latitud ="Error"
+            longitud = "Error"
+            UTMx = "Error"
+            UTMy = "Error"
+        if odometry:
+            velocidad = odometry.attrs['odometry_vel'].value
+        data =json.dumps( {'Melex1':[{"Ocupado":ocupado, "Velocidad": velocidad,"CargaBatería":carga, "Coordenadas":[{ "Latitud": latitud, "Longitud":longitud, "UTMx": UTMx, "UTMy": UTMy}] }] })
+        with open('json_data.json', 'w') as outfile:
+            outfile.write(data)
+        outfile.close()
+
 
     def set_movement(self):
         robot = self.g.get_node('robot')
         if robot:
             self.advance = robot.attrs['robot_ref_adv_speed'].value
             self.rotation = robot.attrs['robot_ref_rot_speed'].value
+            self.brake = robot.attrs['robot_ref_brake_speed'].value
         try:
             if not self.ROVER.is_open():
                 if not self.ROVER.open():
                     print("unable to connect to " + self.SERVER_HOST_ROVER + ":" + str(self.SERVER_PORT_ROVER))
-            if self.advance >= 0:
-                ACELERADOR = (self.advance * self.max_melex_adv)/1.3
-                FRENO = 1500
-            else:
-                ACELERADOR = 0
-                FRENO = (abs(self.advance * self.max_melex_brake) + 1500)
-                if self.ROVER.is_open():
-                    self.ROVER.write_single_register(self.MAP_FRENO, int(FRENO))
 
-
+            ACELERADOR = (self.atras * self.advance * self.max_melex_adv) / 1.3
+            FRENO = self.brake
             if self.ROVER.is_open():
                 print("ACELERADOR", ACELERADOR)
-                self.ROVER.write_single_register(self.MAP_VELOCIDAD, int(ACELERADOR))
-
-            DIRECCION = -self.rotation * self.wheel_center + self.wheel_center
+                self.ROVER.write_single_register( self.MAP_VELOCIDAD, int(ACELERADOR))
+            DIRECCION = -self.rotation * self.wheel_center  + self.wheel_center
+            print("DIRECCION ", DIRECCION)
 
             # print("ROTACION",self.rotation)
             # print("DIRECCION", DIRECCION)

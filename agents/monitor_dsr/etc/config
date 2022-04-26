@@ -17,6 +17,19 @@ JoystickAdapterProxy = joystickadapter:tcp -h localhost -p 9999
 
 InnerModelPath = innermodel.xml
 
+bumper = true
+
+
+#DECIMALES CON COMA!!!!!!!!!
+
+first_threshold = 7000
+second_threshold = 5000
+stop_distance =4000
+first_threshold_velocity = 0,7
+second_threshold_velocity = 0,4
+
+trim = 3
+
 Ice.Warn.Connections=0
 Ice.Trace.Network=0
 Ice.Trace.Protocol=0
