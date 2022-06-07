@@ -54,12 +54,12 @@ class SpecificWorker(GenericWorker):
         # creamos procesos de comunicación por socket
         p = Process(target=self.com_socket, args=('192.168.50.40', 2001, self.sensores))
         p2 = Process(target=self.com_socket, args=('192.168.50.41', 2001, self.sensores))
-        p3 = Process(target=self.com_socket, args=('192.168.50.42', 2002, self.sensores))
+        #p3 = Process(target=self.com_socket, args=('192.168.50.42', 2002, self.sensores))
         # self.p2 = Process(target=self.com_socket, args=('192', 2001, self.sensores))
         # arrancamos los procesos
         p.start()
         p2.start()
-        p3.start()
+        #p3.start()
 
 
         # YOU MUST SET AN UNIQUE ID FOR THIS AGENT IN YOUR DEPLOYMENT. "_CHANGE_THIS_ID_" for a valid unique integer
@@ -111,16 +111,30 @@ class SpecificWorker(GenericWorker):
             '''
 
         print('sensores =', self.sensores)
+        for sensor in self.sensores:
+            if 'Ultra' in sensor:
+                self.update_ultras_nodes(sensor)
 
 
-        #self.update_battery_node()
 
         return True
 
     def startup_check(self):
         QTimer.singleShot(200, QApplication.instance().quit)
 
-    
+    def update_ultras_nodes(self, ultra_sensor_name):
+        print(ultra_sensor_name)
+        distancia = self.sensores[ultra_sensor_name][0]
+        try:
+            if ultra_node := self.g.get_node(ultra_sensor_name):
+                if float(distancia) > 3500 or distancia == 'NaN':
+                    ultra_node.attrs['ultrasound_distance'] = Attribute(3500.0, self.agent_id)
+                else:
+                    ultra_node.attrs['ultrasound_distance'] = Attribute(float(distancia), self.agent_id)
+                self.g.update_node(ultra_node)
+        except:
+            print("No Existe el Nodo", ultra_sensor_name)
+
 
     def com_socket(self, ip, puerto, dic):
         # Create a TCP/IP socket
@@ -226,20 +240,19 @@ class SpecificWorker(GenericWorker):
     # =============================================
 
     def update_node_att(self, id: int, attribute_names: [str]):
-        console.print(f"UPDATE NODE ATT: {id} {attribute_names}", style='green')
+        pass  # console.print(f"UPDATE NODE ATT: {id} {attribute_names}", style='green')
 
     def update_node(self, id: int, type: str):
-        console.print(f"UPDATE NODE: {id} {type}", style='green')
+        pass  # console.print(f"UPDATE NODE: {id} {type}", style='green')
 
     def delete_node(self, id: int):
-        console.print(f"DELETE NODE:: {id} ", style='green')
+        pass  # console.print(f"DELETE NODE:: {id} ", style='green')
 
     def update_edge(self, fr: int, to: int, type: str):
-
-        console.print(f"UPDATE EDGE: {fr} to {type}", type, style='green')
+        pass  # console.print(f"UPDATE EDGE: {fr} to {type}", type, style='green')
 
     def update_edge_att(self, fr: int, to: int, type: str, attribute_names: [str]):
-        console.print(f"UPDATE EDGE ATT: {fr} to {type} {attribute_names}", style='green')
+        pass  # console.print(f"UPDATE EDGE ATT: {fr} to {type} {attribute_names}", style='green')
 
     def delete_edge(self, fr: int, to: int, type: str):
-        console.print(f"DELETE EDGE: {fr} to {type} {type}", style='green')
+        pass  # console.print(f"DELETE EDGE: {fr} to {type} {type}", style='green')
