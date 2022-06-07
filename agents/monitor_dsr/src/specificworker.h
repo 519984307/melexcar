@@ -41,7 +41,14 @@ public:
 	~SpecificWorker();
 	bool setParams(RoboCompCommonBehavior::ParameterList params);
 
-
+	void DifferentialRobot_correctOdometer(int x, int z, float alpha);
+	void DifferentialRobot_getBasePose(int &x, int &z, float &alpha);
+	void DifferentialRobot_getBaseState(RoboCompGenericBase::TBaseState &state);
+	void DifferentialRobot_resetOdometer();
+	void DifferentialRobot_setOdometer(RoboCompGenericBase::TBaseState state);
+	void DifferentialRobot_setOdometerPose(int x, int z, float alpha);
+	void DifferentialRobot_setSpeedBase(float adv, float rot);
+	void DifferentialRobot_stopBase();
 
 	void JoystickAdapter_sendData(RoboCompJoystickAdapter::TData data);
 

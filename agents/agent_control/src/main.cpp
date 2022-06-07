@@ -77,7 +77,7 @@
 #include "config.h"
 #include "genericmonitor.h"
 #include "genericworker.h"
-#include "specificworker_original.h"
+#include "specificworker.h"
 #include "specificmonitor.h"
 #include "commonbehaviorI.h"
 

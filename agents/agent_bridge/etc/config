@@ -11,6 +11,11 @@ OdometryMelex.Endpoints=tcp -p 11111
 Radar.Endpoints=tcp -p 0
 
 
+# Proxies for required interfaces
+CameraRGBDSimpleProxy = camerargbdsimple:tcp -h 192.168.50.76 -p 14842
+HumanCameraBodyProxy = humancamerabody:tcp -h 192.168.50.76 -p 14213
+LaserProxy = laser:tcp -h 192.168.50.76 -p 14520
+
 agent_id = 0 # Change id
 agent_name = agent_bridge
 tree_view = true

@@ -11,6 +11,12 @@ OdometryMelex.Endpoints=tcp -p 0
 Radar.Endpoints=tcp -p 0
 
 
+# Proxies for required interfaces
+CameraRGBDSimpleProxy = camerargbdsimple:tcp -h localhost -p 0
+HumanCameraBodyProxy = humancamerabody:tcp -h localhost -p 0
+LaserProxy = laser:tcp -h localhost -p 10003
+
+
 agent_id = 0 # Change id
 agent_name = agent_bridge
 tree_view = true

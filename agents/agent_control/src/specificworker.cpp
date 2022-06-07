@@ -66,10 +66,11 @@ void SpecificWorker::initialize(int period)
 		timer.start(Period);
 		// create graph
 		G = std::make_shared<DSR::DSRGraph>(0, agent_name, agent_id, ""); // Init nodes
+        rt = G->get_rt_api();
 		std::cout<< __FUNCTION__ << "Graph loaded" << std::endl;  
 
 		//dsr update signals
-		//connect(G.get(), &DSR::DSRGraph::update_node_signal, this, &SpecificWorker::modify_node_slot);
+//		connect(G.get(), &DSR::DSRGraph::update_node_signal, this, &SpecificWorker::modify_node_slot);
 //		connect(G.get(), &DSR::DSRGraph::update_edge_signal, this, &SpecificWorker::modify_edge_slot);
 //		connect(G.get(), &DSR::DSRGraph::update_node_attr_signal, this, &SpecificWorker::modify_attrs_slot);
 //		connect(G.get(), &DSR::DSRGraph::del_edge_signal, this, &SpecificWorker::del_edge_slot);
@@ -184,14 +185,14 @@ void SpecificWorker::initialize(int period)
 		timer.start(Period);
         try {
 
-            if (auto laser_node = G->get_node("laser_nivel_0"); laser_node.has_value())
-                laser1_id = laser_node->id();
-            if (auto laser_node = G->get_node("laser_nivel_1"); laser_node.has_value())
-                laser2_id = laser_node->id();
-            if (auto laser_node = G->get_node("laser_nivel_2"); laser_node.has_value())
-                laser3_id = laser_node->id();
-            if (auto laser_node = G->get_node("laser_nivel_3"); laser_node.has_value())
-                laser4_id = laser_node->id();
+            if (auto laser_front_node = G->get_node(laser_front_name); laser_front_node.has_value())
+                front_laser_id = laser_front_node->id();
+            if (auto laser_back_node = G->get_node(laser_back_name); laser_back_node.has_value())
+                back_laser_id = laser_back_node->id();
+            if (auto laser_right_node = G->get_node(laser_right_name); laser_right_node.has_value())
+                right_laser_id = laser_right_node->id();
+            if (auto laser_left_node = G->get_node(laser_left_name); laser_left_node.has_value())
+                left_laser_id = laser_left_node->id();
         }
         catch(const std::exception &e) { qFatal("Laser nodes Missing at initialize"); }
 
@@ -200,26 +201,20 @@ void SpecificWorker::initialize(int period)
 
 void SpecificWorker::compute()
 {
-    QPolygonF laserpoly,laserpoly1,laserpoly2,laserpoly3;
+    QPolygonF laserpoly;
     QPolygonF lasercomplete;
 
-    read_laser(laser1_id, laser_front_name, laserpoly); // 0-179
-    read_laser(laser2_id, laser_right_name, laserpoly1); // 0-86
-    read_laser(laser3_id, laser_back_name, laserpoly2); // 0 - 86
-    read_laser(laser4_id, laser_left_name, laserpoly3); // 0 - 86
-    QStringView Green = QStringView(QString("LightGreen"));
-    QStringView Red = QStringView(QString("Red"));
-    QStringView Blue = QStringView(QString("Blue"));
-    QStringView Yellow = QStringView(QString("Yellow"));
-    //laser_integrator(laserpoly, lasercomplete);
-    draw_laser(laserpoly,Green);
-    draw_laser(laserpoly1,Red);
-    draw_laser(laserpoly2,Blue);
-    draw_laser(laserpoly3,Yellow);
+    read_laser(front_laser_id, laser_front_name, laserpoly); // 0-179
+    read_laser(right_laser_id, laser_right_name, laserpoly); // 0-86
+    read_laser(back_laser_id, laser_back_name, laserpoly); // 0 - 86
+    read_laser(left_laser_id, laser_left_name, laserpoly); // 0 - 86
 
-    //read_battery();
-    //read_cords();
-    //read_odometry();
+    laser_integrator(laserpoly, lasercomplete);
+    draw_laser(lasercomplete);
+    read_battery();
+    read_cords();
+    read_odometry();
+    update_robot_localization_gps();
     //cout << "SIZE1" << size.width() << "height"<< size.height();
     if (size != custom_widget.webengine->size()){
         map->setFixedSize(custom_widget.webengine->size());
@@ -228,7 +223,61 @@ void SpecificWorker::compute()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
+void SpecificWorker::update_robot_localization_gps()
+{
+    //static RoboCompFullPoseEstimation::FullPoseEuler last_state;
+    //RoboCompFullPoseEstimation::FullPoseEuler pose;
+    float rot,mapx,mapy;
+    //RoboCompGpsUblox::DatosGPS map;
+    try
+    {
+        //pose = fullposeestimation_proxy->getFullPoseEuler();
+        //map = gpsublox_proxy->getData();
+        if( auto robot = G->get_node(robot_name); robot.has_value())
+        {
+            if (auto gps = G->get_node(gps_name); gps.has_value())
+            {
+                mapx = G->get_attrib_by_name<gps_map_x_att>(gps.value()).value();
+                mapy = G->get_attrib_by_name<gps_map_y_att>(gps.value()).value();
+                rot = G->get_attrib_by_name<gps_rot_att>(gps.value()).value();
+                cout<< " rot_nodo: "<< rot <<endl;
+                //        qInfo() << __FUNCTION__ << " mapx" << map.mapx;
+                //        qInfo() << __FUNCTION__ << " mapY" << map.mapy;
+                //qInfo() << "X:" << pose.x  << "// Y:" << pose.y << "// Z:" << pose.z << "// RX:" << pose.rx << "// RY:" << pose.ry << "// RZ:" << pose.rz;
+            }
+        }
 
+    }
+    catch(const Ice::Exception &e){ std::cout << e.what() <<  __FUNCTION__ << std::endl;};
+
+    if( auto robot = G->get_node(robot_name); robot.has_value())
+    {
+        if( auto parent = G->get_parent_node(robot.value()); parent.has_value())
+        {
+            if (are_different(std::vector < float > {mapx, mapy},
+                              std::vector < float > {last_mapx, last_mapy},
+                              std::vector < float > {1, 1, 0.05}))
+            {
+                auto edge = rt->get_edge_RT(parent.value(), robot->id()).value();
+                G->modify_attrib_local<rt_rotation_euler_xyz_att>(edge, std::vector < float > {0.0, 0.0, rot});
+                G->modify_attrib_local<rt_translation_att>(edge, std::vector < float > {mapx, mapy, 1800});
+                //G->modify_attrib_local<rt_translation_velocity_att>(edge, std::vector<float>{pose.vx, pose.vy, pose.vz});
+                //G->modify_attrib_local<rt_rotation_euler_xyz_velocity_att>(edge, std::vector<float>{pose.vrx, pose.vry, pose.vrz});
+                // linear velocities are WRT world axes, so local speed has to be computed WRT to the robot's moving frame
+                //float side_velocity = -sin(pose.rz) * pose.vx + cos(pose.rz) * pose.vy;
+                //float adv_velocity = -cos(pose.rz) * pose.vx + sin(pose.rz) * pose.vy;
+                G->insert_or_assign_edge(edge);
+                //G->add_or_modify_attrib_local<robot_local_linear_velocity_att>(robot.value(), std::vector<float>{adv_velocity, side_velocity, pose.rz});
+                G->update_node(robot.value());
+                //last_state = pose;
+                last_mapx = mapx;
+                last_mapy = mapy;
+            }
+        }
+        else  qWarning() << __FUNCTION__ << " No parent found for node " << QString::fromStdString(robot_name);
+    }
+    else    qWarning() << __FUNCTION__ << " No node " << QString::fromStdString(robot_name);
+}
 void SpecificWorker::read_laser(std::uint64_t id, const std::string laser_name, QPolygonF &laserpoly)
 {
     if(auto laser_node = G->get_node(id); laser_node.has_value())
@@ -260,10 +309,14 @@ void SpecificWorker::read_laser(std::uint64_t id, const std::string laser_name, 
     }
 }
 
-void SpecificWorker::draw_laser(QPolygonF &laserpoly, QStringView colour)
+void SpecificWorker::draw_laser(QPolygonF &laserpoly)
 {
     static QGraphicsItem *laser_polygon = nullptr;
-    QColor color(colour);
+
+    if (laser_polygon != nullptr)
+        local_view->scene.removeItem(laser_polygon);
+
+    QColor color("LightGreen");
     color.setAlpha(40);
     laser_polygon = local_view->scene.addPolygon(laserpoly, QPen(QColor("DarkGreen"), 30), QBrush(color));
     laser_polygon->setZValue(3);
@@ -332,7 +385,14 @@ void SpecificWorker::read_cords()
         custom_widget.longitud_n->display(lon.value());
     }
 }
-
+/////////////// AUX //////////////
+bool SpecificWorker::are_different(const std::vector<float> &a, const std::vector<float> &b, const std::vector<float> &epsilon)
+{
+    for(auto &&[aa, bb, e] : iter::zip(a, b, epsilon))
+        if (fabs(aa - bb) > e)
+            return true;
+    return false;
+};
 ///////////////////////////////////////////////////////////////////////////////////////////////
 int SpecificWorker::startup_check()
 {

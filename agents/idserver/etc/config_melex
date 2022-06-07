@@ -7,7 +7,7 @@ DSRGetID.Endpoints=tcp -p 11000
 agent_id = 1
 agent_name = idserver
 
-dsr_input_file = /home/pioneernuc/robocomp/components/melexcar/etc/robot-melex.json
+dsr_input_file = /home/pioneernuc/robocomp/components/melexcar/etc/robot-melex_ultra.json
 tree_view = false
 graph_view = true
 2d_view = true

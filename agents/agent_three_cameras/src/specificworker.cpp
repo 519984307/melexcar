@@ -17,7 +17,7 @@
  *    along with RoboComp.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "specificworker.h"
-
+#include <cppitertools/zip.hpp>
 /**
 * \brief Default constructor
 */
@@ -74,7 +74,8 @@ void SpecificWorker::initialize(int period)
 		timer.start(Period);
 		// create graph
 		G = std::make_shared<DSR::DSRGraph>(0, agent_name, agent_id, ""); // Init nodes
-		std::cout<< __FUNCTION__ << "Graph loaded" << std::endl;  
+		std::cout<< __FUNCTION__ << "Graph loaded" << std::endl;
+        inner_eigen = G->get_inner_eigen_api();
 
 		//dsr update signals
 		connect(G.get(), &DSR::DSRGraph::update_node_signal, this, &SpecificWorker::modify_node_slot);
@@ -118,7 +119,6 @@ void SpecificWorker::initialize(int period)
 
     int fps_depth = 15;
     int fps_color = 15;
-
     // center camera
     try
     {
@@ -205,6 +205,10 @@ void SpecificWorker::initialize(int period)
     compression_params.push_back(cv::IMWRITE_JPEG_QUALITY);
     compression_params.push_back(50);
 
+    cout<<"Reading"<<endl;
+    //PATH LOADING
+    load_path("etc/V1_waypoints.csv");
+    cout<<"Readed"<<endl;
     this->Period = 50;
     if(this->startup_check_flag)
         this->startup_check();
@@ -214,10 +218,12 @@ void SpecificWorker::initialize(int period)
 
 void SpecificWorker::compute()
 {
+
     auto &cam_map_extended = read_and_filter(cam_map);   // USE OPTIONAL
     auto ldata_local = compute_laser(cam_map_extended);
     //auto &&[virtual_frame] = mosaic(cam_map_extended);
     auto &&[v_f] = mosaic(cam_map_extended);
+
     my_mutex.lock();
         virtual_frame=v_f.clone();
     my_mutex.unlock();
@@ -228,6 +234,7 @@ void SpecificWorker::compute()
         cv::cvtColor(virtual_frame, virtual_frame, cv::COLOR_BGR2RGB);
         update_three_camera_node(three_frontal_camera_name, virtual_frame, buffer);
     }
+    read_camera();
 
     if(display_depth)
         show_depth_images(cam_map_extended);
@@ -238,6 +245,8 @@ void SpecificWorker::compute()
     }
     if (display_laser)
         draw_laser(ldata_local);
+
+
 
     ldata_return = ldata_local;
     fps.print("FPS: ");
@@ -251,6 +260,25 @@ void SpecificWorker::compute()
 
 //    insert_laser_node();
     update_laser_node(laser_front_name,ldata_local);
+}
+void SpecificWorker::load_path(string filename)
+{
+    ifstream fin;
+    fin.open(filename);
+    string x, y;
+    vector<float> x_vec, y_vec;
+
+    while(!fin.eof())
+    {
+        getline(fin, x, ',');
+        getline(fin, y);
+        x_vec.push_back(atof(x.c_str()));
+        y_vec.push_back(atof(y.c_str()));
+    }
+    fin.close();
+    xpts = x_vec;
+    ypts = y_vec;
+    xpts.erase(xpts.end()-1); ypts.erase(ypts.end()-1);
 }
 
 SpecificWorker::Camera_Map& SpecificWorker::read_and_filter(Camera_Map &cam_map)
@@ -348,6 +376,66 @@ void SpecificWorker::show_depth_images(Camera_Map &cam_map)
         cv::imshow("Depth mosaic", frame_final);
         cv::waitKey(1);
     }
+}
+void SpecificWorker::read_camera()
+{
+    static QPixmap pix;
+    if (auto vframe_t = virtual_camera_buffer.try_get(); vframe_t.has_value())
+    {
+        auto vframe = cv::Mat(cam_api->get_height(), cam_api->get_width(), CV_8UC3, vframe_t.value().data());
+        //ESTE ES EL Q EXPLOTA (para mi yo de mañana)   
+        //cv::cvtColor(vframe, vframe, cv::COLOR_BGR2RGB);
+
+        if(vframe.cols>0 and vframe.rows>0 )
+        {
+//            cout << "SIZE_X " << xpts.size() << "SIZE_y " << ypts.size() << endl;
+//            for (auto &x : xpts)
+//                cout << "X " << x << endl;
+//            for (auto &y : ypts)
+//                cout << "y " << y << endl;
+            //for (auto &&[x, y ]: iter::zip(xpts, ypts))
+            int i;
+            for (i=0; i<xpts.size(); i++)
+            {
+                cout << "XPTS" << xpts[i] <<"YPTS "<<ypts[i]<< endl;
+                Eigen::Vector3d p(xpts[i], ypts[i], 0);
+                cout << "p" << p.x() <<p.y()<<p.z()<< endl;
+                if (auto pc = inner_eigen->transform(three_frontal_camera_name, p, world_name); pc.has_value())
+                {
+                    cout << "XPTS2" << xpts[0] << endl;
+                    //qInfo() << __FUNCTION__ << pc.value().x() << pc.value().y() << pc.value().z();
+                    if(pc.value().y() > 0)
+                    {
+                        cout << "XPTS3" << xpts[0] << endl;
+                        auto coor = cam_api->project(pc.value());
+                        cout << "x: " << coor.x() << endl;
+                        cout << "y: " << coor.y() << endl;
+                        cv::circle(vframe, cv::Point(coor.x(), coor.y()), 10, cv::Scalar(0, 233, 255), cv::FILLED);
+
+                        // label
+                        auto robot_pos = inner_eigen->transform(world_name, robot_name).value();
+                        float distance = sqrt(pow((robot_pos.x() - p.x() * 1.0), 2) + pow((robot_pos.y() - p.y() * 1.0), 2)) / 1000; //en metros
+                        if (distance < 3.0) //is near
+                        {
+                            std::stringstream d;
+                            d << std::fixed << std::setprecision(2) << distance;
+                            std::string dist = d.str();
+                            cv::Scalar colorText(0, 0, 0);
+                            cv::Point centerText((int) coor.x() - 23, (int) coor.y() + 5);
+                            cv::putText(vframe, dist, centerText, cv::FONT_ITALIC, 0.6, colorText, 2, false);
+                        }
+                    }
+                } else qWarning() << __FUNCTION__ << "Cannot transform between world and camera";
+            }
+            cv::imshow("Path", vframe);
+            cv::waitKey(1);
+        }
+    }
+
+    //if (custom_widget.image_push_button->isDown())
+    //    cv::destroyWindow("Path");
+    //pix = QPixmap::fromImage(QImage(vframe.data, vframe.cols, vframe.rows, QImage::Format_RGB888));
+    // custom_widget.label_rgb->setPixmap(pix);
 }
 
 void SpecificWorker::print_camera_params(const std::string &serial, const rs2::pipeline_profile &profile)
@@ -477,6 +565,7 @@ void SpecificWorker::update_three_camera_node(std::string camera_name, const cv:
     if(auto node = G->get_node(camera_name); node.has_value())
     {
         std::vector<uint8_t> rgb; rgb.assign(v_image.data, v_image.data + v_image.total()*v_image.channels());
+        virtual_camera_buffer.put(std::vector<uint8_t>(rgb.begin(), rgb.end()));
         G->add_or_modify_attrib_local<cam_rgb_att>(node.value(), rgb);
         G->add_or_modify_attrib_local<cam_rgb_width_att>(node.value(), v_image.cols);
         G->add_or_modify_attrib_local<cam_rgb_height_att>(node.value(), v_image.rows);

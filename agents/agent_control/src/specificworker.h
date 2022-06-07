@@ -59,6 +59,7 @@ class SpecificWorker : public GenericWorker
     private:
         // DSR graph
         std::shared_ptr<DSR::DSRGraph> G;
+        std::unique_ptr<DSR::RT_API> rt;
 
         //DSR params
         std::string agent_name;
@@ -69,8 +70,10 @@ class SpecificWorker : public GenericWorker
         bool qscene_2d_view;
         bool osg_3d_view;
         QSize size;
+        float last_mapx = 0.0;
+        float last_mapy = 0.0;
         LeafLetGPSViewer *map;
-        std::uint64_t laser1_id, laser2_id, laser3_id, laser4_id;
+        std::uint64_t front_laser_id, right_laser_id, back_laser_id, left_laser_id;
 
 
         // laser
@@ -94,12 +97,14 @@ class SpecificWorker : public GenericWorker
         inline QPointF e2q(const Eigen::Vector3d &p)const {
             return QPointF(p.x(), p.y());
         }
-        void draw_laser(QPolygonF &poly, QStringView color);
+        void update_robot_localization_gps();
+        void draw_laser(QPolygonF &poly);
 
         void read_battery();
         void read_cords();
         void read_odometry();
         void laser_integrator(QPolygonF poly, QPolygonF &poly_complete);
+        bool are_different(const vector<float> &a, const vector<float> &b, const vector<float> &epsilon);
 
     std::map<double, double> laser_map;
 

@@ -1,0 +1,12 @@
+import "Ultrasound.idsl";
+
+Component ultrasound_agent
+{
+    Communications
+    {
+    	implements Ultrasound;
+    };
+	language Python;
+	options dsr;
+};
+

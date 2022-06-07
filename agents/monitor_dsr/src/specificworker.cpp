@@ -154,7 +154,7 @@ void SpecificWorker::set_car_movement(float adv, float rot, int brake)
             G->add_or_modify_attrib_local<robot_ref_rot_speed_att>(robot_node.value(), (float) 0);
             G->update_node(robot_node.value());
         }else {*/
-            cout << "avanceeeeee" << adv << endl;
+            //cout << "avanceeeeee" << adv << endl;
             G->add_or_modify_attrib_local<robot_ref_adv_speed_att>(robot_node.value(), (float) adv);
             G->add_or_modify_attrib_local<robot_ref_rot_speed_att>(robot_node.value(), (float) rot);
             G->add_or_modify_attrib_local<robot_ref_brake_speed_att>(robot_node.value(), (int) brake);
@@ -259,7 +259,56 @@ int SpecificWorker::startup_check()
 	return 0;
 }
 
+void SpecificWorker::DifferentialRobot_correctOdometer(int x, int z, float alpha)
+{
+//implementCODE
 
+}
+
+void SpecificWorker::DifferentialRobot_getBasePose(int &x, int &z, float &alpha)
+{
+//implementCODE
+
+}
+
+void SpecificWorker::DifferentialRobot_getBaseState(RoboCompGenericBase::TBaseState &state)
+{
+//implementCODE
+
+}
+
+void SpecificWorker::DifferentialRobot_resetOdometer()
+{
+//implementCODE
+
+}
+
+void SpecificWorker::DifferentialRobot_setOdometer(RoboCompGenericBase::TBaseState state)
+{
+//implementCODE
+
+}
+
+void SpecificWorker::DifferentialRobot_setOdometerPose(int x, int z, float alpha)
+{
+//implementCODE
+
+}
+
+void SpecificWorker::DifferentialRobot_setSpeedBase(float adv, float rot)
+{
+cout<<"Adv: "<<adv<<"Rot: "<<rot<<endl;
+adv_speed = adv;
+rot_speed = -rot;
+
+}
+
+void SpecificWorker::DifferentialRobot_stopBase()
+{
+//implementCODE
+
+
+}
 //SUBSCRIPTION to sendData method from JoystickAdapter interface
 void SpecificWorker::JoystickAdapter_sendData(RoboCompJoystickAdapter::TData data)
 {
@@ -267,7 +316,7 @@ void SpecificWorker::JoystickAdapter_sendData(RoboCompJoystickAdapter::TData dat
     for(auto  &a: joydata.axes)
     {
         if(a.name == "advance"){
-            //adv_speed = clamp(a.value, -1.0, 1.0);
+            //adv_speed = std::clamp(a.value, -1.0, 1.0);
             if (a.value > 1.0){
                 adv_speed = 1.0;
             }

@@ -45,6 +45,10 @@
 #include <cppitertools/sliding_window.hpp>
 #include <cppitertools/range.hpp>
 #include  "../../../etc/pioneer_world_names.h"
+#include "definitions.h"
+#include "curvaturalaser.h"
+#include "cdata.h"
+#include "circle.h"
 
 
 class SpecificWorker : public GenericWorker
@@ -61,6 +65,7 @@ public:
 	RoboCompLaser::TLaserData Laser_getLaserAndBStateData(RoboCompGenericBase::TBaseState &bState);
 	RoboCompLaser::LaserConfData Laser_getLaserConfData();
 	RoboCompLaser::TLaserData Laser_getLaserData();
+
 
     RoboCompLaser::TLaserData ldata_return;
 
@@ -100,7 +105,34 @@ private:
                     rs2::frame>>;
     bool startup_check_flag;
     Camera_Map cam_map;
+    //worker
+    int indice_grupo;
+    std::vector<double> array_pixels, array_points;			// Array para deteccion de esquinas (r,theta)
+    std::vector<int> breakpoints;
 
+    // Vectores de coordenadas (cartesianas y polares)
+    std::vector<float> x_coords, y_coords, angles, dists;
+
+    // Posición del robot
+    double robot_x, robot_y;
+
+    std::vector<float> distanbreak;
+    std::vector<float> angulobreak;
+    std::vector<float> distancorners;
+    std::vector<float> angulocorners;
+    std::vector<float> distancirculo;
+    std::vector<float> angulocirculo;
+
+
+    std::vector<double> array_corners, virtual_corners, segmento, matriz_virtual, matriz_cov_circulos;
+    int cont_segment, cont_circle;
+    int contseg;
+    CIRCULO   circle;
+    CIRCULO circulo_new(double *array_pixels,int inicio,int fin);
+    std::vector<SEGMENTO> array_segment_local;
+    std::vector<CIRCULO> array_circle_local;
+    MAPA_LASER scan_mapa, scan_maparef;
+    MAPA_LASER mapa;
     // camera
     std::string serial_center, serial_left, serial_right;
     bool display_rgb = false;
@@ -193,6 +225,34 @@ private:
     // void update_three_camera_compressed(string camera_name, const vector<uchar> compressed_data);
     void insert_laser_node();
     void update_laser_node(string laser_name, const RoboCompLaser::TLaserData &ldata);
+
+    //worker
+    void iniciar_mapa_local();
+    bool find_breakPoints(int contador); //
+    std::vector<bool> MapBreakPoints (); //
+    void features ( const std::vector<RoboCompLaser::TData> & lData, MAPA_LASER * scan_mapa, MAPA_LASER * scan_maparef);
+    double distance(double x1, double y1, double x2, double y2); //
+    double rad2angle ( double angle );
+    double angle2rad ( double angle );
+    void incluir_circulo(MAPA_LASER *mapa, CIRCULO *array_circle_local, CIRCULO circle, int cont_circle, double *matriz);
+    void segment_new(int inicio, int fin);
+    void incluir_segmento(); //
+    void detectar_EsquinaVirtual();
+    void incluir_esquina_virtual(MAPA_LASER *mapa);
+    void map_copy(MAPA_LASER *mapa, MAPA_LASER *ref);
+    void matriz_covarianza_circulo(CIRCULO circle, double *matriz, int cont);
+    void segmento_Kai(int inicio, int fin);
+    void obtener_mapa(MAPA_LASER *mapa);
+    void matriz_covarianza_virtual(SEGMENTO segmento_2,SEGMENTO segmento_1, std::vector<double> matriz, int cont);
+    double dist_euclidean2D(double x1, double y1, double x2, double y2);
+    void extremo_kai(double rho, double theta, double alfa, double r, double *x1, double *y1);
+
+
+
+
+
+
+
 };
 
 #endif

@@ -1,6 +1,6 @@
 num_gps = 2
 theta = 0.24906021553765
-N_average = 3
+N_average = 4
 
 # X-Y origin coordinate
 
@@ -25,9 +25,9 @@ tz_0 = 0
 name_1 = gps_front
 ip_1 = 192.168.50.121
 port_1 = 2947
-tx_1 = 0.1
-ty_1 = 0.1
-tz_1 = 0.2
+tx_1 = 0
+ty_1 = 0
+tz_1 = 0
 
 
 Ice.Warn.Connections=0

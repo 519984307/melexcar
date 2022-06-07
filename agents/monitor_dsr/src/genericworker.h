@@ -31,6 +31,8 @@
 #include <ui_mainUI.h>
 #include <CommonBehavior.h>
 
+#include <DifferentialRobot.h>
+#include <GenericBase.h>
 #include <JoystickAdapter.h>
 
 
@@ -55,6 +57,14 @@ public:
 
 
 
+	virtual void DifferentialRobot_correctOdometer(int x, int z, float alpha) = 0;
+	virtual void DifferentialRobot_getBasePose(int &x, int &z, float &alpha) = 0;
+	virtual void DifferentialRobot_getBaseState(RoboCompGenericBase::TBaseState &state) = 0;
+	virtual void DifferentialRobot_resetOdometer() = 0;
+	virtual void DifferentialRobot_setOdometer(RoboCompGenericBase::TBaseState state) = 0;
+	virtual void DifferentialRobot_setOdometerPose(int x, int z, float alpha) = 0;
+	virtual void DifferentialRobot_setSpeedBase(float adv, float rot) = 0;
+	virtual void DifferentialRobot_stopBase() = 0;
 	virtual void JoystickAdapter_sendData (RoboCompJoystickAdapter::TData data) = 0;
 
 protected:

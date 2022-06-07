@@ -38,6 +38,7 @@
 #include <FullPoseEstimationPub.h>
 #include <GenericBase.h>
 #include <GpsUblox.h>
+#include <HumanCameraBody.h>
 #include <Laser.h>
 #include <OdometryMelex.h>
 #include <Radar.h>
@@ -47,7 +48,7 @@
 #define BASIC_PERIOD 100
 
 
-using TuplePrx = std::tuple<>;
+using TuplePrx = std::tuple<RoboCompCameraRGBDSimple::CameraRGBDSimplePrxPtr,RoboCompHumanCameraBody::HumanCameraBodyPrxPtr,RoboCompLaser::LaserPrxPtr>;
 
 
 class GenericWorker : public QMainWindow, public Ui_guiDlg
@@ -63,6 +64,9 @@ public:
 	QMutex *mutex;
 
 
+	RoboCompCameraRGBDSimple::CameraRGBDSimplePrxPtr camerargbdsimple_proxy;
+	RoboCompHumanCameraBody::HumanCameraBodyPrxPtr humancamerabody_proxy;
+	RoboCompLaser::LaserPrxPtr laser_proxy;
 
 	virtual RoboCompBatteryStatus::TBattery BatteryStatus_getBatteryState() = 0;
 	virtual RoboCompCameraRGBDSimple::TRGBD CameraRGBDSimple_getAll(std::string camera) = 0;

@@ -1,12 +1,20 @@
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 # Sources set
 SET ( SOURCES
+  definitions.h
   specificworker.cpp
+  cdata.cpp
+  circle.cpp
+  curvaturalaser.cpp
   specificmonitor.cpp
 )
 
 # Headers set
 SET ( HEADERS
+  cdata.h
+  circle.h
+  curvaturalaser.h
+  #definitions.h				
   specificworker.h
   specificmonitor.h
 )

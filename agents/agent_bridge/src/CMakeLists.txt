@@ -42,8 +42,8 @@ FIND_PACKAGE( Ice REQUIRED COMPONENTS Ice++11 IceStorm++11)
 
 #ROBOCOMP
 ROBOCOMP_INITIALIZE( $ENV{ROBOCOMP}/ )
-ROBOCOMP_IDSL_TO_ICE( CommonBehavior BatteryStatus CameraRGBDSimple CameraSimple FullPoseEstimation FullPoseEstimationPub GenericBase GpsUblox Laser OdometryMelex Radar)
-ROBOCOMP_ICE_TO_SRC( CommonBehavior BatteryStatus CameraRGBDSimple CameraSimple FullPoseEstimation FullPoseEstimationPub GenericBase GpsUblox Laser OdometryMelex Radar)
+ROBOCOMP_IDSL_TO_ICE( CommonBehavior BatteryStatus CameraRGBDSimple CameraRGBDSimple CameraSimple FullPoseEstimation FullPoseEstimationPub GenericBase GpsUblox HumanCameraBody Laser Laser OdometryMelex Radar)
+ROBOCOMP_ICE_TO_SRC( CommonBehavior BatteryStatus CameraRGBDSimple CameraRGBDSimple CameraSimple FullPoseEstimation FullPoseEstimationPub GenericBase GpsUblox HumanCameraBody Laser Laser OdometryMelex Radar)
 SET (EXECUTABLE_OUTPUT_PATH ${RC_COMPONENT_DEVEL_PATH}/bin)
 
 QT_WRAP_UI( UI_HEADERS mainUI.ui )

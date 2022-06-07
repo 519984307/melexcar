@@ -32,10 +32,15 @@
 #include "dsr/gui/dsr_gui.h"
 #include <doublebuffer/DoubleBuffer.h>
 #include "/home/pioneernuc/robocomp/components/melexcar/etc/pioneer_world_names.h"
+#include <opencv2/imgproc.hpp>
+#include <opencv2/opencv.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 class SpecificWorker : public GenericWorker
 {
 Q_OBJECT
+    using MyClock = std::chrono::system_clock;
+    using mSec = std::chrono::duration<double, std::milli>;
 public:
 	SpecificWorker(TuplePrx tprx, bool startup_check);
 	~SpecificWorker();
@@ -74,6 +79,8 @@ private:
 	bool qscene_2d_view;
 	bool osg_3d_view;
     int MAX_LASER_BINS = 180;
+    struct LaserPoint{ float dist; float angle;};
+    std::vector<LaserPoint> read_laser_front_robot();
 
     // DSR graph viewer
 	std::unique_ptr<DSR::DSRViewer> graph_viewer;
@@ -85,6 +92,8 @@ private:
 	void del_edge_slot(std::uint64_t from, std::uint64_t to, const std::string &edge_tag){};
 	void del_node_slot(std::uint64_t from){};     
 	bool startup_check_flag;
+    	void update_three_camera();
+    void update_laser(const std::vector<LaserPoint> &laser_data, const std::string laser_name);
 
 };
 

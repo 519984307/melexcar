@@ -41,15 +41,18 @@ from pydsr import *
 # import librobocomp_osgviewer
 # import librobocomp_innermodel
 
+TO_MS = .2778
+SCALAR_TO_M = 4.75
+
 
 class SpecificWorker(GenericWorker):
     def __init__(self, proxy_map, startup_check=False):
         super(SpecificWorker, self).__init__(proxy_map)
         self.Period = 100
-
-        # YOU MUST SET AN UNIQUE ID FOR THIS AGENT IN YOUR DEPLOYMENT. "_CHANGE_THIS_ID_" for a valid unique integer
         self.agent_id = 32
         self.g = DSRGraph(0, "pythonAgent", self.agent_id)
+        self.gps_dict = {}
+        self.pos = 0
 
         try:
             signals.connect(self.g, signals.UPDATE_NODE_ATTR, self.update_node_att)
@@ -84,7 +87,6 @@ class SpecificWorker(GenericWorker):
         self.fixedY = float(params["fixedY"])
         self.fixed_alpha = float(params["fixed_alpha"])
         self.N_average = int(params["N_average"])
-        self.gps_dict = {}
 
         for i in range(int(self.num_gps)):
             name = params["name_" + str(i)]
@@ -94,53 +96,58 @@ class SpecificWorker(GenericWorker):
             ty = float(params["ty_" + str(i)])
             tz = float(params["tz_" + str(i)])
 
-            # Diccionario [0]=ip [1]=port [2]=tx [3]=ty [4]=tz [5]=socket [6]=data_stream [7]=data  [8-1]=lat,long,alt,speed [13]=hdop
-            self.gps_dict[name] = [ip, port, tx, ty, tz]
-
-        for key in self.gps_dict:
-
             gps_socket = gps3.GPSDSocket()
             data_stream = gps3.DataStream()
-            gps_socket.connect(host=self.gps_dict[key][0], port=self.gps_dict[key][1])
-            print("CONEXION: ", self.gps_dict[key][0], ":", self.gps_dict[key][1])
+            gps_socket.connect(host=ip, port=port)
+            print("CONEXION: ", ip, ":", port)
             gps_socket.watch()
 
-            self.gps_dict[key].append(gps_socket)
-            self.gps_dict[key].append(data_stream)
+            data_gps = {
+                "lat":   np.zeros(self.N_average),
+                "long":  np.zeros(self.N_average),
+                "elev":  np.zeros(self.N_average),
+                "speed": np.zeros(self.N_average),
+                "hdop":  np.zeros(self.N_average),
+            }
 
-            data_gps = {"lat": [None] * self.N_average,
-                        "long": [None] * self.N_average,
-                        "elev": [None] * self.N_average,
-                        "speed": [None] * self.N_average,
-                        "hdop": [None] * self.N_average
-                        }
-
-            self.gps_dict[key].append(data_gps)
-
-            # inicio de valores lat,long,elev,speed, utmx, utmy, xgps e ygps
-            for i in range(8):
-                self.gps_dict[key].append(0.0)
+            self.gps_dict[name] = {
+                "ip":     ip, #0
+                "port":   port,
+                "tx":     tx,
+                "ty":     ty,
+                "tz":     tz,
+                "socket": gps_socket, #5
+                "stream": data_stream,
+                "data":   data_gps,
+                "lat":   0.0,
+                "long":   0.0,
+                "elev":   0.0, #10
+                "speed":   0.0,
+                "utmX":   0.0,
+                "utmX":   0.0,
+                "mapX":   0.0,
+                "mapY":   0.0, #15
+            }
 
         # Build rotation matrix
         rot = np.array([
             [np.cos(self.theta), -np.sin(self.theta), 0.0, 0.0],
-            [np.sin(self.theta), np.cos(self.theta), 0.0, 0.0],
+            [np.sin(self.theta),  np.cos(self.theta), 0.0, 0.0],
             [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ]
-        )
+            [0.0, 0.0, 0.0, 1.0],])
+
         # Build shear/skew matrix
         m = np.tan(self.phi)
         skew = np.array([
             [1.0, 0.0, 0.0, 0.0],
             [m, 1.0, 0.0, 0.0],
             [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ]
-        )
+            [0.0, 0.0, 0.0, 1.0],])
+
         # get affine transform
         self.a = rot @ skew
         print(self.a)
+
         # Build pipeline
         self.pt_transform = Transformer.from_pipeline(
             f"+proj=pipeline "
@@ -148,142 +155,88 @@ class SpecificWorker(GenericWorker):
             f"+step +proj=affine +xoff={0} +yoff={0} "
             f"+s11={self.a[0, 0]} +s12={self.a[0, 1]} +s13={self.a[0, 2]} "
             f"+s21={self.a[1, 0]} +s22={self.a[1, 1]} +s23={self.a[1, 2]} "
-            f"+s31={self.a[2, 0]} +s32={self.a[2, 1]} +s33={self.a[2, 2]} "
-        )
+            f"+s31={self.a[2, 0]} +s32={self.a[2, 1]} +s33={self.a[2, 2]} ")
         print(self.pt_transform)
-
-        self.p1 = Proj("epsg:4326")
-        self.p2 = Proj("epsg:23030")
-        # self.fixedX = -371886.67816326916  #-574401.7908652775 -473268.6192685478
-        # self.fixedY =4417967.8278194275 #4396225.790356246#4408260.03717906
-
-
-
         return True
-
 
     @QtCore.Slot()
     def compute(self):
-        for key in self.gps_dict:
+        for gps in self.gps_dict.values():
             try:
-                self.gps_dict[key][5].next()
+                gps["socket"].next()
                 # self.gps_dict[key].append(json.loads(self.gps_dict[key][5].response))
                 # gps_json=json.loads(self.gps_dict[key][5].response)
-                gps_node = self.g.get_node("gps")
-                if gps_node:
+                if gps_node := self.g.get_node("gps"):
                     gps_node.attrs['gps_connected'] = Attribute(True, self.agent_id)
                     self.g.update_node(gps_node)
             except:
-                print("Error lectura:", key)
-                gps_node = self.g.get_node("gps")
-                if gps_node:
+                print("Error lectura:", gps["name"])
+                if gps_node := self.g.get_node("gps"):
                     gps_node.attrs['gps_connected'] = Attribute(False, self.agent_id)
                     self.g.update_node(gps_node)
 
-
             # gps_json=self.gps_dict[key][8]
-            self.gps_socket = self.gps_dict[key][5]
-            self.data_stream = self.gps_dict[key][6]
+            gps_socket = gps["socket"]
+            data_stream = gps["stream"]
+            print(data_stream)
 
-            if (self.gps_socket.response):
-                self.data_stream.unpack(self.gps_socket.response)
+            if (gps_socket.response):
+                data_stream.unpack(gps_socket.response)
 
-                if self.data_stream.TPV['lat'] != 'n/a':
+                if data_stream.TPV['lat'] != 'n/a':
 
-                    self.gps_dict[key][7]["lat"].insert(0, float(self.data_stream.TPV['lat']))
-                    del self.gps_dict[key][7]["lat"][-1]
+                    gps["data"]["lat"][self.pos] = float(data_stream.TPV['lat'])
+                    gps["data"]["long"][self.pos] = float(data_stream.TPV['lon'])
+                    gps["data"]["elev"][self.pos] = float(data_stream.TPV['alt'])
+                    gps["data"]["speed"][self.pos] = float(data_stream.TPV['speed'])
 
-                    self.gps_dict[key][7]["long"].insert(0, float(self.data_stream.TPV['lon']))
-                    del self.gps_dict[key][7]["long"][-1]
+                    gps["lat"] = gps["data"]["lat"].mean()
+                    gps["long"] = gps["data"]["long"].mean()
+                    gps["elev"] = gps["data"]["elev"].mean()
+                    gps["speed"] = gps["data"]["speed"].mean() * TO_MS
 
-                    self.gps_dict[key][7]["elev"].insert(0, float(self.data_stream.TPV['alt']))
-                    del self.gps_dict[key][7]["elev"][-1]
+                    if data_stream.SKY['hdop'] != "n/a":
+                        gps["data"]["hdop"] = data_stream.SKY['hdop'] * SCALAR_TO_M
 
-                    self.gps_dict[key][7]["speed"].insert(0, float(self.data_stream.TPV['speed']))
-                    del self.gps_dict[key][7]["speed"][-1]
+                    #gps["utmX"], gps["utmY"] = utm.from_latlon(gps["data"]["lat"][0], gps["data"]["long"][0])
+                    u= utm.from_latlon(gps["data"]["lat"][0], gps["data"]["long"][0])
+                    gps["utmX"] = u[0]
+                    gps["utmY"] = u[1]
+                    gps["mapX"], gps["mapY"] = self.pt_transform.transform(gps["utmX"], gps["utmY"])
 
-                    self.gps_dict[key][8] = sum(self.gps_dict[key][7]["lat"]) / self.N_average
-                    self.gps_dict[key][9] = sum(self.gps_dict[key][7]["long"]) / self.N_average
-                    self.gps_dict[key][10] = sum(self.gps_dict[key][7]["elev"]) / self.N_average
-                    self.gps_dict[key][11] = sum(self.gps_dict[key][7]["speed"]) * 0.2778 / self.N_average
+                    gps["mapX"] = gps["mapX"] * 1000 - (self.fixedX * 1000)
+                    gps["mapY"] = gps["mapY"] * 1000 - (self.fixedY * 1000)
 
-                    # print("HDOP",self.data_stream.SKY['hdop'])
+        self.pos = (self.pos + 1) % self.N_average
 
-                    if self.data_stream.SKY['hdop'] != "n/a":
-                        self.gps_dict[key][7]["hdop"] = self.data_stream.SKY['hdop'] * 4.75
-                        # print(self.data_stream.SKY['hdop'],self.gps_dict[key][7]["hdop"])
-                        # print("hdop: ",self.gps_dict[key][7]["hdop"])
-                    # print(self.gps_dict[key][11])
-
-                    u = utm.from_latlon(float(self.gps_dict[key][7]["lat"][0]), float(self.gps_dict[key][7]["long"][0]))
-                    # u = utm.from_latlon(self.latitude, self.longitude)
-
-                    self.xgps2 = u[0]
-                    self.ygps2 = u[1]
-
-                    self.UTMx = self.xgps2
-                    self.UTMy = self.ygps2
-                    # transform points into UTM
-
-                    # self.UTMx = self.xgps2
-                    # self.UTMy = self.ygps2
-                    # self.xgps2, self.ygps2 = self.pt_transform.transform(self.xgps2, self.ygps2)
-
-                    # self.xgps2=(self.xgps2*1000 - (self.fixedX*1000) + (self.originX))
-                    # self.ygps2=(self.ygps2*1000 - (self.fixedY*1000) + (self.originY))
-
-                    self.gps_dict[key][12] = self.xgps2
-                    self.gps_dict[key][13] = self.ygps2
-
-                    self.gps_dict[key][14], self.gps_dict[key][15] = self.pt_transform.transform(self.xgps2, self.ygps2)
-
-                    self.gps_dict[key][14] = (self.gps_dict[key][14] * 1000 - (self.fixedX * 1000))
-                    self.gps_dict[key][15] = (self.gps_dict[key][15] * 1000 - (self.fixedY * 1000))
-
-                    # print(key,"fixed x: ",self.gps_dict[key][12])
-                    # print(key,"fixed y: ",self.gps_dict[key][13])
-
-        if (self.num_gps > 1):
+        if(self.num_gps > 1):
             geodesic = Geod(ellps='WGS84')
-            self.azimut = geodesic.inv(self.gps_dict["gps_rear"][9], self.gps_dict["gps_rear"][8],
-                                       self.gps_dict["gps_front"][9], self.gps_dict["gps_front"][8])
-            self.fwd_azimut = self.azimut[0]
-            self.alpha = self.fwd_azimut - self.theta * 180 / 3.14159265359
+            self.azim = geodesic.inv(self.gps_dict["gps_rear"]["long"],  self.gps_dict["gps_rear"]["lat"],
+                                     self.gps_dict["gps_front"]["long"], self.gps_dict["gps_front"]["lat"])
+            self.alpha = self.azim[0] - np.degrees(self.theta)
 
-            # print("azimut: ",self.fwd_azimut)
-
-        self.latitude = 0
-        self.longitude = 0
-        self.altitude = 0
-        self.speed = 0
-        self.UTMx = 0
-        self.UTMy = 0
-        self.mapx = 0
-        self.mapy = 0
-        self.hdop = 0.0
-
-        for key in self.gps_dict:
-            self.latitude = self.latitude + self.gps_dict[key][8] / self.num_gps
-            self.longitude = self.longitude + self.gps_dict[key][9] / self.num_gps
-            self.altitude = self.altitude + self.gps_dict[key][10] / self.num_gps
-            self.speed = self.speed + self.gps_dict[key][11] / self.num_gps
-            self.UTMx = self.UTMx + self.gps_dict[key][12] / self.num_gps
-            self.UTMy = self.UTMx + self.gps_dict[key][13] / self.num_gps
-            self.mapx = self.mapx + self.gps_dict[key][14] / self.num_gps
-            self.mapy = self.mapy + self.gps_dict[key][15] / self.num_gps
-            # if (float(self.gps_dict[key][7]["hdop"][0]>self.hdop):
-            #    self.hdop = self.gps_dict[key][7]["hdop"]
+        self.lat, self.long, self.alt, self.speed, self.utmx, self.utmy, self.mapx, self.mapy, self.hdop = 0, 0, 0, 0, 0, 0, 0, 0, 0
+        for gps in self.gps_dict.values():
+            self.lat += gps["lat"] / self.num_gps
+            self.long += gps["long"] / self.num_gps
+            self.alt += gps["elev"] / self.num_gps
+            self.speed += gps["speed"] / self.num_gps
+            self.utmx += gps["utmX"] / self.num_gps
+            self.utmy += gps["utmY"] / self.num_gps
+            self.mapx += gps["mapX"] / self.num_gps
+            self.mapy += gps["mapY"] / self.num_gps
+            self.hdop = self.hdop #if float(gps["data"]["hdop"][0]) < self.hdop else gps["data"]["hdop"][1]
 
         print("Mapx: ", self.mapx, "mm Mapy: ", self.mapy, " mm")
-        print("alpha (º): ", self.alpha, "radianes =", self.alpha * 3.14159265359 / 180)
+        print("alpha (º): ", self.alpha, "radianes =", np.radians(self.alpha))
         print("speed: m/s", self.speed)
         print("HDOP = ", self.hdop)
         self.Update_gps_node()
-        fa = open('GPS.csv', 'a')
-        self.aaa = csv.writer(fa)
-        if self.aaa is not None:
-            self.aaa.writerow([self.latitude, self.longitude, self.altitude])
 
+        file = open('GPS.csv', 'a')
+        f_writer = csv.writer(file)
+        if f_writer is not None:
+            f_writer.writerow([self.lat, self.long, self.alt])
         return True
 
     def startup_check(self):
@@ -291,28 +244,22 @@ class SpecificWorker(GenericWorker):
 
     def Update_gps_node(self):
         gps_node = self.g.get_node("gps")
-        print(float(self.latitude))
-        print(float(self.longitude))
         if gps_node:
-            gps_node.attrs['gps_latitude'] = Attribute(float(self.latitude), self.agent_id )
-            gps_node.attrs['gps_longitude'] = Attribute(float(self.longitude), self.agent_id )
-            gps_node.attrs['gps_altitude'] = Attribute(float(self.altitude), self.agent_id )
-            gps_node.attrs['gps_map_x'] = Attribute(float(self.mapx), self.agent_id )
-            gps_node.attrs['gps_map_y'] = Attribute(float(self.mapy), self.agent_id )
-            gps_node.attrs['gps_azimut'] = Attribute(float(self.fwd_azimut), self.agent_id )
-            gps_node.attrs['gps_rot'] = Attribute(float(self.alpha * np.pi/180), self.agent_id )
-            gps_node.attrs['gps_UTMx'] = Attribute(float(self.UTMx), self.agent_id)
-            gps_node.attrs['gps_UTMy'] = Attribute(float(self.UTMy), self.agent_id)
+            gps_node.attrs['gps_latitude'] = Attribute(float(self.lat), self.agent_id)
+            print(self.lat)
+            print(self.long)
+            gps_node.attrs['gps_longitude'] = Attribute(float(self.long), self.agent_id)
+            gps_node.attrs['gps_altitude'] = Attribute(float(self.alt), self.agent_id)
+            gps_node.attrs['gps_map_x'] = Attribute(float(self.mapx), self.agent_id)
+            gps_node.attrs['gps_map_y'] = Attribute(float(self.mapy), self.agent_id)
+            gps_node.attrs['gps_azimut'] = Attribute(float(self.azim[0]), self.agent_id)
+            gps_node.attrs['gps_rot'] = Attribute(float(np.radians(self.alpha)), self.agent_id)
+            gps_node.attrs['gps_UTMx'] = Attribute(float(self.utmx), self.agent_id)
+            gps_node.attrs['gps_UTMy'] = Attribute(float(self.utmy), self.agent_id)
         self.g.update_node(gps_node)
-
-
-
-
-
 
     # =============== DSR SLOTS  ================
     # =============================================
-
     def update_node_att(self, id: int, attribute_names: [str]):
         console.print(f"UPDATE NODE ATT: {id} {attribute_names}", style='green')
 

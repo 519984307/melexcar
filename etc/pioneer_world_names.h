@@ -16,6 +16,7 @@ const std::string world_name = "world";
 const std::string floor_name = "floor";
 const std::string wide_angle_camera_name = "wide_angle_camera";
 const std::string three_frontal_camera_name = "three_frontal_camera";
+const std::string breakpoints_laser_name = "breakpoints_laser_name";
 const std::string right_camera_name = "right_camera";
 const std::string left_camera_name = "left_camera";
 const std::string two_back_camera_name = "back_camera";

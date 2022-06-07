@@ -7,12 +7,14 @@ import "Laser.idsl";
 import "Radar.idsl";
 import "CameraSimple.idsl";
 import "OdometryMelex.idsl";
+import "HumanCameraBody.idsl";
 
 Component agent_bridge
 {
     Communications
     {
         implements BatteryStatus, FullPoseEstimationPub, CameraRGBDSimple, GpsUblox, Laser, Radar, CameraSimple, OdometryMelex;
+        requires HumanCameraBody, CameraRGBDSimple, Laser;
     };
     language Cpp11;
     gui Qt(QMainWindow);

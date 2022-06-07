@@ -123,28 +123,29 @@ class SpecificWorker(GenericWorker):
 
     @QtCore.Slot()
     def compute(self):
-        # print('SpecificWorker.compute...')
-        # response = os.system("ping -c 1 " + self.hostname)
-        # # and then check the response...
-        # print("MARCHA", self.ROVER.read_holding_registers(3))
-        # if response == 0:
-        #     print(self.ROVER.read_holding_registers(self.MAP_SEGURIDAD))
-        #     if self.ROVER.read_holding_registers(self.MAP_SEGURIDAD) == [0]:
-        #         self.ROVER.write_single_register(self.MAP_SEGURIDAD, 1)
-        #         print(self.hostname, 'is up!')
-        #     self.set_movement()
-        # else:
-        #     print(self.hostname, 'down')
-        #     self.ROVER.write_single_register(self.MAP_SEGURIDAD, 0)
-        #     conex = False
-        # self.read_odometry()
-        # ####################################### PROBAR ###############################################
-        # if self.ROVER.read_holding_registers(8) == [0] and self.advance < 0:
-        #     self.ROVER.write_single_register(self.MAP_CAMBIO, 2)
-        #     self.atras = -1
-        # elif self.ROVER.read_holding_registers(8) == [0] and self.advance > 0:
-        #     self.ROVER.write_single_register(self.MAP_CAMBIO, 1)
-        #     self.atras = 1
+        print('SpecificWorker.compute...')
+        #response = os.system("ping -c 1 " + self.hostname)
+        # and then check the response...
+        print("MARCHA", self.ROVER.read_holding_registers(3))
+        response = 0
+        if response == 0:
+            print(self.ROVER.read_holding_registers(self.MAP_SEGURIDAD))
+            if self.ROVER.read_holding_registers(self.MAP_SEGURIDAD) == [0]:
+                self.ROVER.write_single_register(self.MAP_SEGURIDAD, 1)
+                print(self.hostname, 'is up!')
+            self.set_movement()
+        else:
+            print(self.hostname, 'down')
+            self.ROVER.write_single_register(self.MAP_SEGURIDAD, 0)
+            conex = False
+        self.read_odometry()
+        ####################################### PROBAR ###############################################
+        if self.ROVER.read_holding_registers(8) == [0] and self.advance < 0:
+            self.ROVER.write_single_register(self.MAP_CAMBIO, 2)
+            self.atras = -1
+        elif self.ROVER.read_holding_registers(8) == [0] and self.advance > 0:
+            self.ROVER.write_single_register(self.MAP_CAMBIO, 1)
+            self.atras = 1
         self.send_json()
 
 
@@ -219,7 +220,7 @@ class SpecificWorker(GenericWorker):
             if self.ROVER.is_open():
                 self.ROVER.write_single_register(self.MAP_DIRECCION, int(DIRECCION))
             if self.ROVER.is_open():
-                self.ROVER.write_single_register(self.MAP_FRENO, int(FRENO))
+                self.ROVER.write_single_register(self.MAP_FRENO, int(100))
         except KeyboardInterrupt:
             print("No conectado")
 

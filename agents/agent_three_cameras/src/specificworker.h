@@ -73,6 +73,7 @@ private:
 	std::shared_ptr<DSR::DSRGraph> G;
     std::unique_ptr<DSR::RT_API> rt;
     std::shared_ptr<DSR::CameraAPI> cam_api;
+    std::shared_ptr<DSR::InnerEigenAPI> inner_eigen;
 
 
 	//DSR params
@@ -102,11 +103,12 @@ private:
     Camera_Map cam_map;
 
     // camera
+    DoubleBuffer<std::vector<std::uint8_t>, std::vector<std::uint8_t>> virtual_camera_buffer;
     std::string serial_center, serial_left, serial_right;
     bool display_rgb = false;
     bool display_depth = false;
     bool display_laser = false;
-    bool compressed = false;
+    bool compressed = true;
     bool view = true;
 
     vector<int> compression_params_image;
@@ -120,6 +122,9 @@ private:
 	bool graph_view;
 	bool qscene_2d_view;
 	bool osg_3d_view;
+
+    //Path
+    std::vector<float> xpts, ypts;
 
 	// DSR graph viewer
 	std::unique_ptr<DSR::DSRViewer> graph_viewer;
@@ -177,9 +182,11 @@ private:
     void draw_laser(const RoboCompLaser::TLaserData &ldata);
 
     // images
+    void load_path(string filename);
     std::tuple<cv::Mat> mosaic(const Camera_Map &cam_map);
     Camera_Map& read_and_filter(Camera_Map &cam_map);
     void print_camera_params(const std::string &serial, const rs2::pipeline_profile &profile);
+    void read_camera();
     void show_depth_images(Camera_Map &cam_map);
     std::mutex my_mutex;
     FPSCounter fps;

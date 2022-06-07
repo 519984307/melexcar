@@ -252,7 +252,7 @@
                             "rt_rotation_euler_xyz": {
                                 "type": 3,
                                 "value": [
-                                    0,
+                                    -0.122346,
                                     0,
                                     0
                                 ]

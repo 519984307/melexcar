@@ -117,6 +117,9 @@ void SpecificWorker::initialize(int period)
 
 void SpecificWorker::compute()
 {
+//update_three_camera();
+   // auto laser = read_laser_front_robot();
+    //update_laser(laser, laser_front_name);
 	//computeCODE
 	//QMutexLocker locker(mutex);
 	//try
@@ -210,7 +213,18 @@ void SpecificWorker::FullPoseEstimationPub_newFullPose(RoboCompFullPoseEstimatio
 //implementCODE
 
 }
+std::vector<SpecificWorker::LaserPoint> SpecificWorker::read_laser_front_robot()
+{
+    std::vector<LaserPoint> laser_data;
 
+    try
+    {
+        auto laser = laser_proxy->getLaserData();
+        std::transform(laser.begin(), laser.end(), std::back_inserter(laser_data), [](const auto &l) {return LaserPoint{l.dist, l.angle}; });
+    }catch (const Ice::Exception &e){ std::cout << e.what() << " No laser_pioneer_data front" << std::endl; return {};}
+
+    return laser_data;
+}
 RoboCompGpsUblox::DatosGPS SpecificWorker::GpsUblox_getData()
 {
     RoboCompGpsUblox::DatosGPS ret;
@@ -238,7 +252,52 @@ void SpecificWorker::GpsUblox_setInitialPose(float x, float y)
 
 }
 
+void SpecificWorker::update_three_camera()
+{
+    RoboCompCameraRGBDSimple::TImage rgb;
 
+    rgb = camerargbdsimple_proxy->getImage(three_frontal_camera_compressed_name);
+    qDebug() << 'IMAGEN' << rgb.width << endl;
+    cv::Mat frame_uncompressed = cv::imdecode(rgb.image, -1);
+    //cv::cvtColor(frame_uncompressed, frame_uncompressed, cv::COLOR_BGR2RGB);
+    //cv::imshow("RGB image", frame_uncompressed);
+
+    if( auto three_camera = G->get_node(three_frontal_camera_name); three_camera.has_value())
+    {
+        cout << "PASA" << endl;
+        std::vector<uint8_t> rgb; rgb.assign(frame_uncompressed.data, frame_uncompressed.data + frame_uncompressed.total()*frame_uncompressed.channels());
+        G->add_or_modify_attrib_local<cam_rgb_att>(three_camera.value(), rgb);
+        G->add_or_modify_attrib_local<cam_rgb_width_att>(three_camera.value(), frame_uncompressed.cols);
+        G->add_or_modify_attrib_local<cam_rgb_height_att>(three_camera.value(), frame_uncompressed.rows);
+        G->add_or_modify_attrib_local<cam_rgb_depth_att>(three_camera.value(), frame_uncompressed.depth());
+        G->add_or_modify_attrib_local<cam_rgb_cameraID_att>(three_camera.value(),1);
+        G->add_or_modify_attrib_local<cam_rgb_alivetime_att>(three_camera.value(), (int)std::chrono::time_point_cast<std::chrono::milliseconds>(MyClock::now()).time_since_epoch().count());
+        G->update_node(three_camera.value());
+    }
+    else
+        qWarning() << __FUNCTION__ << "Node three_frontal_camera not found";
+}
+
+void SpecificWorker::update_laser(const std::vector<LaserPoint> &laser_data, const std::string laser_name)
+{
+    if( auto node = G->get_node(laser_name); node.has_value())
+    {
+
+        // Transform laserData into two std::vector<float>
+        std::vector<float> dists;
+        std::transform(laser_data.begin(), laser_data.end(), std::back_inserter(dists), [](const auto &l) { return l.dist; });
+        std::vector<float> angles;
+        std::transform(laser_data.begin(), laser_data.end(), std::back_inserter(angles), [](const auto &l) { return l.angle; });
+
+        // update laser in DSR
+        G->add_or_modify_attrib_local<laser_dists_att>(node.value(), dists);
+        G->add_or_modify_attrib_local<laser_angles_att>(node.value(), angles);
+        G->update_node(node.value());
+
+    }
+    else
+        qWarning() << __FUNCTION__ << "No laser node found";
+}
 RoboCompLaser::TLaserData SpecificWorker::Laser_getLaserAndBStateData(RoboCompGenericBase::TBaseState &bState)
 {
 //implementCODE
@@ -292,6 +351,42 @@ RoboCompOdometryMelex::TOdometry SpecificWorker::OdometryMelex_getOdometryState(
     return res;
 }
 
+
+
+/**************************************/
+// From the RoboCompCameraRGBDSimple you can call this methods:
+// this->camerargbdsimple_proxy->getAll(...)
+// this->camerargbdsimple_proxy->getDepth(...)
+// this->camerargbdsimple_proxy->getImage(...)
+
+/**************************************/
+// From the RoboCompCameraRGBDSimple you can use this types:
+// RoboCompCameraRGBDSimple::TImage
+// RoboCompCameraRGBDSimple::TDepth
+// RoboCompCameraRGBDSimple::TRGBD
+
+/**************************************/
+// From the RoboCompHumanCameraBody you can call this methods:
+// this->humancamerabody_proxy->newPeopleData(...)
+
+/**************************************/
+// From the RoboCompHumanCameraBody you can use this types:
+// RoboCompHumanCameraBody::TImage
+// RoboCompHumanCameraBody::TGroundTruth
+// RoboCompHumanCameraBody::KeyPoint
+// RoboCompHumanCameraBody::Person
+// RoboCompHumanCameraBody::PeopleData
+
+/**************************************/
+// From the RoboCompLaser you can call this methods:
+// this->laser_proxy->getLaserAndBStateData(...)
+// this->laser_proxy->getLaserConfData(...)
+// this->laser_proxy->getLaserData(...)
+
+/**************************************/
+// From the RoboCompLaser you can use this types:
+// RoboCompLaser::LaserConfData
+// RoboCompLaser::TData
 
 /**************************************/
 // From the RoboCompBatteryStatus you can use this types:
