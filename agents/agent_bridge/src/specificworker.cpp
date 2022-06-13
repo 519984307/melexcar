@@ -117,9 +117,9 @@ void SpecificWorker::initialize(int period)
 
 void SpecificWorker::compute()
 {
-//update_three_camera();
-   // auto laser = read_laser_front_robot();
-    //update_laser(laser, laser_front_name);
+update_three_camera();
+auto laser = read_laser_front_robot();
+update_laser(laser, laser_front_name);
 	//computeCODE
 	//QMutexLocker locker(mutex);
 	//try

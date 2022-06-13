@@ -82,6 +82,7 @@ class SpecificWorker(GenericWorker):
         self.phi = 0
 
         self.originX = float(params["originX"])
+        self.cont_error = 0;
         self.originY = float(params["originY"])
         self.fixedX = float(params["fixedX"])
         self.fixedY = float(params["fixedY"])
@@ -229,8 +230,12 @@ class SpecificWorker(GenericWorker):
 
         print("Mapx: ", self.mapx, "mm Mapy: ", self.mapy, " mm")
         print("alpha (º): ", self.alpha, "radianes =", np.radians(self.alpha))
+        if self.alpha > 7:
+            print("SE HA IDO")
+            self.cont_error += 1
         print("speed: m/s", self.speed)
         print("HDOP = ", self.hdop)
+        print("VECES_MAL: ",self.cont_error)
         self.Update_gps_node()
 
         file = open('GPS.csv', 'a')

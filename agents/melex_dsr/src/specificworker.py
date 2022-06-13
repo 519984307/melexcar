@@ -80,7 +80,7 @@ class SpecificWorker(GenericWorker):
         # define modbus server host, port
         self.ROVER.host(self.SERVER_HOST_ROVER)
         self.ROVER.port(self.SERVER_PORT_ROVER)
-
+        self.frenado = False
         #Direcciones Registros PLC
         self.MAP_DIRECCION = 0  # La direccion va desde 0 -> 24000. La posicion dentral del volante es 12000.
         self.MAP_VELOCIDAD = 1  # La velocidad va desde 0- > 5300.
@@ -195,7 +195,14 @@ class SpecificWorker(GenericWorker):
             outfile.write(data)
         outfile.close()
 
-
+    def read_ultra(self):
+        ultra_left_front = self.g.get_node('ultra_left_front')
+        ultra_right_front = self.g.get_node('ultra_right_front')
+        if ultra_left_front and ultra_right_front:
+            right_front_dist = ultra_right_front.attrs['ultrasound_distance']
+            left_front_dist = ultra_left_front.attrs['ultrasound_distances']
+        if right_front_dist <= 1800.0 or left_front_dist <=1800.0:
+            self.frenado = True
     def set_movement(self):
         robot = self.g.get_node('robot')
         if robot:
@@ -206,21 +213,25 @@ class SpecificWorker(GenericWorker):
             if not self.ROVER.is_open():
                 if not self.ROVER.open():
                     print("unable to connect to " + self.SERVER_HOST_ROVER + ":" + str(self.SERVER_PORT_ROVER))
+            if self.frenado:
+                if self.ROVER.is_open():
+                    self.ROVER.write_single_register(self.MAP_VELOCIDAD, int(0))
+                    self.ROVER.write_single_register(self.MAP_FRENO, int(1000))
+            else:
+                ACELERADOR = (self.atras * self.advance * self.max_melex_adv) / 1.3
+                FRENO = self.brake
+                if self.ROVER.is_open():
+                    print("ACELERADOR", ACELERADOR)
+                    self.ROVER.write_single_register( self.MAP_VELOCIDAD, int(ACELERADOR))
+                DIRECCION = -self.rotation * self.wheel_center  + self.wheel_center
+                print("DIRECCION ", DIRECCION)
 
-            ACELERADOR = (self.atras * self.advance * self.max_melex_adv) / 1.3
-            FRENO = self.brake
-            if self.ROVER.is_open():
-                print("ACELERADOR", ACELERADOR)
-                self.ROVER.write_single_register( self.MAP_VELOCIDAD, int(ACELERADOR))
-            DIRECCION = -self.rotation * self.wheel_center  + self.wheel_center
-            print("DIRECCION ", DIRECCION)
-
-            # print("ROTACION",self.rotation)
-            # print("DIRECCION", DIRECCION)
-            if self.ROVER.is_open():
-                self.ROVER.write_single_register(self.MAP_DIRECCION, int(DIRECCION))
-            if self.ROVER.is_open():
-                self.ROVER.write_single_register(self.MAP_FRENO, int(100))
+                # print("ROTACION",self.rotation)
+                # print("DIRECCION", DIRECCION)
+                if self.ROVER.is_open():
+                    self.ROVER.write_single_register(self.MAP_DIRECCION, int(DIRECCION))
+                if self.ROVER.is_open():
+                    self.ROVER.write_single_register(self.MAP_FRENO, int(100))
         except KeyboardInterrupt:
             print("No conectado")
 
