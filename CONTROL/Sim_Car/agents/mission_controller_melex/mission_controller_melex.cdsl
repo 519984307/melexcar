@@ -1,0 +1,10 @@
+Component mission_controller_melex
+{
+    Communications
+    {
+    };
+    language Cpp11;
+    gui Qt(QMainWindow);
+    options dsr;
+};
+

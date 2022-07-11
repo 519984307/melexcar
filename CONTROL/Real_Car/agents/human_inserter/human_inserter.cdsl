@@ -1,0 +1,12 @@
+import "HumanCameraBody.idsl";
+Component human_inserter
+{
+    Communications
+    {
+        requires HumanCameraBody;
+    };
+    language Cpp11;
+    gui Qt(QMainWindow);
+    options dsr;
+};
+

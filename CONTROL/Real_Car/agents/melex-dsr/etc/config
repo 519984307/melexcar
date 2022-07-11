@@ -1,0 +1,41 @@
+CommonBehavior.Endpoints=tcp -p 10300
+
+# Proxies for required interfaces
+BatteryStatusProxy = batterystatus:tcp -h pioneernuc.local -p 10470
+CameraSimpleProxy = camerasimple:tcp -h pioneernuc.local -p 10200
+GpsUbloxProxy = gpsublox:tcp -h pioneernuc.local -p 10250
+LaserProxy = laser:tcp -h pioneernuc.local -p 18011
+Laser1Proxy = laser:tcp -h pioneernuc.local -p 14520
+Laser2Proxy = laser:tcp -h pioneernuc.local -p 15601
+Laser3Proxy = laser:tcp -h pioneernuc.local -p 12547
+CameraRGBDSimpleProxy = camerargbdsimple:tcp -h pioneernuc.local -p 15615
+CameraRGBDSimple1Proxy = camerargbdsimple:tcp -h pioneernuc.local -p 28350
+CameraRGBDSimple2Proxy = camerargbdsimple:tcp -h pioneernuc.local -p 15003
+CameraRGBDSimple3Proxy = camerargbdsimple:tcp -h pioneernuc.local -p 11000
+OdometryMelexProxy = odometrymelex:tcp -h pioneernuc.local -p 11111
+DifferentialRobotProxy = differentialrobot:tcp -h pioneernuc.local -p 18035
+FullPoseEstimationProxy = fullposeestimation:tcp -h localhost -p 0
+RSSIStatusProxy = rssistatus:tcp -h localhost -p 0
+RadarProxy = radar:tcp -h localhost -p 0
+
+#Robot origin
+
+x = 9300 //4363 //10143;//14963-13*340-400;//-3171;
+y = 5525 //17081//18225-13600+900;//-6680;
+z = 0
+rx = 0
+ry = 0
+rz = 0
+
+agent_id = 30 # Change id
+agent_name = melex_dsr
+tree_view = false
+graph_view = true
+2d_view = true
+3d_view = false
+robot_real = true
+
+Ice.Warn.Connections=0
+Ice.Trace.Network=0
+Ice.Trace.Protocol=0
+Ice.MessageSizeMax=20004800

@@ -1,0 +1,22 @@
+import "DifferentialRobot.idsl";
+import "CameraRGBDSimple.idsl";
+import "BatteryStatus.idsl";
+import "RSSIStatus.idsl";
+import "FullPoseEstimation.idsl";
+import "Laser.idsl";
+import "GpsUblox.idsl";
+import "Radar.idsl";
+import "CameraSimple.idsl";
+import "OdometryMelex.idsl";
+
+Component melex_dsr
+{
+    Communications
+    {
+        requires DifferentialRobot, OdometryMelex, Radar, CameraSimple, CameraRGBDSimple, CameraRGBDSimple, CameraRGBDSimple, CameraRGBDSimple, BatteryStatus, RSSIStatus, FullPoseEstimation, Laser, Laser, Laser, Laser, GpsUblox;
+    };
+    language Cpp11;
+    gui Qt(QMainWindow);
+    options dsr;
+};
+
