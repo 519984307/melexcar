@@ -23,17 +23,11 @@ from PySide2.QtCore import QTimer
 from PySide2.QtWidgets import QApplication
 from rich.console import Console
 from genericworker import *
-
+from APIManager import *
 sys.path.append('/opt/robocomp/lib')
 console = Console(highlight=False)
 
 from pydsr import *
-
-
-# If RoboComp was compiled with Python bindings you can use InnerModel in Python
-# import librobocomp_qmat
-# import librobocomp_osgviewer
-# import librobocomp_innermodel
 
 
 class SpecificWorker(GenericWorker):
@@ -41,9 +35,10 @@ class SpecificWorker(GenericWorker):
         super(SpecificWorker, self).__init__(proxy_map)
         self.Period = 2000
 
-        # YOU MUST SET AN UNIQUE ID FOR THIS AGENT IN YOUR DEPLOYMENT. "_CHANGE_THIS_ID_" for a valid unique integer
-        self.agent_id = "_CHANGE_THIS_ID_"
-        self.g = DSRGraph(0, "pythonAgent", self.agent_id)
+        self.agent_id = 666
+        self.g = DSRGraph(0, "api_communicator", self.agent_id)
+
+        self.melex1 = APIManager(1)
 
         try:
             signals.connect(self.g, signals.UPDATE_NODE_ATTR, self.update_node_att)
@@ -66,44 +61,42 @@ class SpecificWorker(GenericWorker):
         """Destructor"""
 
     def setParams(self, params):
-        # try:
-        #	self.innermodel = InnerModel(params["InnerModelPath"])
-        # except:
-        #	traceback.print_exc()
-        #	print("Error reading config params")
         return True
-
 
     @QtCore.Slot()
     def compute(self):
-        print('SpecificWorker.compute...')
-        # computeCODE
-        # try:
-        #   self.differentialrobot_proxy.setSpeedBase(100, 0)
-        # except Ice.Exception as e:
-        #   traceback.print_exc()
-        #   print(e)
+        # TODO : Actualizar grafo para que el nodo robot se llame con el nombre del vehículo, y además sea un tipo
+        #  específico.
 
-        # The API of python-innermodel is not exactly the same as the C++ version
-        # self.innermodel.updateTransformValues('head_rot_tilt_pose', 0, 0, 0, 1.3, 0, 0)
-        # z = librobocomp_qmat.QVec(3,0)
-        # r = self.innermodel.transform('rgbd', z, 'laser')
-        # r.printvector('d')
-        # print(r[0], r[1], r[2])
+        #  Después, hacer un for leyendo del grafo para crear un objeto de clase por cada robot.
+        self.melex1.create_put_json(self.read_G())
+        if request:
+            self.melex1.
+
 
         return True
 
     def startup_check(self):
         QTimer.singleShot(200, QApplication.instance().quit)
+    def read_G(self, name = 'robot'):
+        robot = self.g.get_node(name)
+        bateria = self.g.get_node('battery')
+        gps = self.g.get_node('gps')
+        odometry = self.g.get_node("odometry")
+        nombre = "Melex1"
+        data = {
+            "lat": gps.attrs["gps_latitude"].value if gps else "error",
+            "lng": gps.attrs["gps_longitude"].value if gps else "error",
+            "speed": odometry.attrs['odometry_vel'].value if odometry else "error",
+            "battery": bateria.attrs['battery_load'].value if bateria else "error",
+            "busy": robot.attrs['robot_occupied'].value if robot else "error"
+        }
 
+        return data
 
+    def task_manager(self, tasks):
 
-
-
-
-    # =============== DSR SLOTS  ================
-    # =============================================
-
+    # DSR SLOTS
     def update_node_att(self, id: int, attribute_names: [str]):
         console.print(f"UPDATE NODE ATT: {id} {attribute_names}", style='green')
 
@@ -114,7 +107,6 @@ class SpecificWorker(GenericWorker):
         console.print(f"DELETE NODE:: {id} ", style='green')
 
     def update_edge(self, fr: int, to: int, type: str):
-
         console.print(f"UPDATE EDGE: {fr} to {type}", type, style='green')
 
     def update_edge_att(self, fr: int, to: int, type: str, attribute_names: [str]):
