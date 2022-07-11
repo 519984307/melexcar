@@ -1,0 +1,9 @@
+Component api_communicator
+{
+    Communications
+    {
+    };
+    language python;
+    options dsr;
+};
+
