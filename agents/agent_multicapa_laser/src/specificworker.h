@@ -45,10 +45,13 @@
 #include <cppitertools/sliding_window.hpp>
 #include <cppitertools/range.hpp>
 #include  "../../../etc/pioneer_world_names.h"
-#include "definitions.h"
-#include "curvaturalaser.h"
-#include "cdata.h"
-#include "circle.h"
+#include <QGraphicsView>
+#include <QGraphicsScene>
+#include <QPointF>
+#include <QVector>
+#include <abstract_graphic_viewer/abstract_graphic_viewer.h>
+#include "LaserAnalyzer.h"
+#include <custom_widget.h>
 
 
 class SpecificWorker : public GenericWorker
@@ -83,17 +86,20 @@ private:
 	//DSR params
 	std::string agent_name;
 	int agent_id;
-
+    AbstractGraphicViewer *viewer;
+    QGraphicsScene *scene;
+    std::vector<QColor> colors = {Qt::yellow, Qt::black, Qt::red, Qt::blue, Qt::green};
     struct CONSTANTS
     {
         float RIG_ELEVATION_FROM_FLOOR = 1.0; // m
         int MAX_LASER_BINS = 180;  // 2 for each degrees
         float TOTAL_HOR_ANGLE = M_PI;  // D455 opens 87 x 58 degrees
-        float max_up_height = 0;
-        float max_down_height = 0;
+        float max_up_height = 0.25;
+        float max_down_height = 2;
         int width = 424; //848
         int height = 240; //480
     };
+
     CONSTANTS consts;
 
     using Camera_Map =  std::map<std::string,
@@ -116,23 +122,10 @@ private:
     // Posición del robot
     double robot_x, robot_y;
 
-    std::vector<float> distanbreak;
-    std::vector<float> angulobreak;
-    std::vector<float> distancorners;
-    std::vector<float> angulocorners;
-    std::vector<float> distancirculo;
-    std::vector<float> angulocirculo;
+    //custom
+    Custom_widget custom_widget;
+    AbstractGraphicViewer *local_view;
 
-
-    std::vector<double> array_corners, virtual_corners, segmento, matriz_virtual, matriz_cov_circulos;
-    int cont_segment, cont_circle;
-    int contseg;
-    CIRCULO   circle;
-    CIRCULO circulo_new(double *array_pixels,int inicio,int fin);
-    std::vector<SEGMENTO> array_segment_local;
-    std::vector<CIRCULO> array_circle_local;
-    MAPA_LASER scan_mapa, scan_maparef;
-    MAPA_LASER mapa;
     // camera
     std::string serial_center, serial_left, serial_right;
     bool display_rgb = false;
@@ -226,31 +219,10 @@ private:
     void insert_laser_node();
     void update_laser_node(string laser_name, const RoboCompLaser::TLaserData &ldata);
 
-    //worker
-    void iniciar_mapa_local();
-    bool find_breakPoints(int contador); //
-    std::vector<bool> MapBreakPoints (); //
-    void features ( const std::vector<RoboCompLaser::TData> & lData, MAPA_LASER * scan_mapa, MAPA_LASER * scan_maparef);
-    double distance(double x1, double y1, double x2, double y2); //
-    double rad2angle ( double angle );
-    double angle2rad ( double angle );
-    void incluir_circulo(MAPA_LASER *mapa, CIRCULO *array_circle_local, CIRCULO circle, int cont_circle, double *matriz);
-    void segment_new(int inicio, int fin);
-    void incluir_segmento(); //
-    void detectar_EsquinaVirtual();
-    void incluir_esquina_virtual(MAPA_LASER *mapa);
-    void map_copy(MAPA_LASER *mapa, MAPA_LASER *ref);
-    void matriz_covarianza_circulo(CIRCULO circle, double *matriz, int cont);
-    void segmento_Kai(int inicio, int fin);
-    void obtener_mapa(MAPA_LASER *mapa);
-    void matriz_covarianza_virtual(SEGMENTO segmento_2,SEGMENTO segmento_1, std::vector<double> matriz, int cont);
-    double dist_euclidean2D(double x1, double y1, double x2, double y2);
-    void extremo_kai(double rho, double theta, double alfa, double r, double *x1, double *y1);
+    //pintar
 
 
-
-
-
+    void draw_points(std::vector<std::vector<std::tuple<float, float, int>>> data);
 
 
 };

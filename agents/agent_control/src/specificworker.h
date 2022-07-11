@@ -72,6 +72,7 @@ class SpecificWorker : public GenericWorker
         QSize size;
         float last_mapx = 0.0;
         float last_mapy = 0.0;
+        std::vector<std::string> distances_name = {"Ultra_left_side", "Ultra_left_front", "Ultra_right_front", "Ultra_right_side", "Lidar_front", "Lidar_right_front", "Lidar_left_front"};
         LeafLetGPSViewer *map;
         std::uint64_t front_laser_id, right_laser_id, back_laser_id, left_laser_id;
 
@@ -94,11 +95,14 @@ class SpecificWorker : public GenericWorker
 //        void del_node_slot(std::uint64_t from){};
 
         void read_laser(std::uint64_t id, const std::string laser_name, QPolygonF &poly);
+        void read_ultrasound(std::string laser_name, QPolygonF &us_poly);
+        void read_ultrasounds(std::vector<std::string> sensors_names, std::vector<QPolygonF> &us_polys);
         inline QPointF e2q(const Eigen::Vector3d &p)const {
             return QPointF(p.x(), p.y());
         }
         void update_robot_localization_gps();
         void draw_laser(QPolygonF &poly);
+        void draw_us(std::vector<QPolygonF> poly);
 
         void read_battery();
         void read_cords();
@@ -107,6 +111,7 @@ class SpecificWorker : public GenericWorker
         bool are_different(const vector<float> &a, const vector<float> &b, const vector<float> &epsilon);
 
     std::map<double, double> laser_map;
+
 
 
 

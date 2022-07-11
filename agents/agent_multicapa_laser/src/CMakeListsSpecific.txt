@@ -1,27 +1,28 @@
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+QT_WRAP_UI( UI_HEADERS localUI.ui)
+
 # Sources set
 SET ( SOURCES
-  definitions.h
   specificworker.cpp
-  cdata.cpp
-  circle.cpp
-  curvaturalaser.cpp
   specificmonitor.cpp
+  custom_widget.h
+  $ENV{ROBOCOMP}/classes/abstract_graphic_viewer/abstract_graphic_viewer.h
+  LaserAnalyzer.cpp
 )
 
 # Headers set
 SET ( HEADERS
-  cdata.h
-  circle.h
-  curvaturalaser.h
-  #definitions.h				
   specificworker.h
   specificmonitor.h
+  LaserAnalyzer.h
 )
 
 INCLUDE( $ENV{ROBOCOMP}/cmake/modules/opencv4.cmake )
 
+
 add_definitions(-g  -fmax-errors=1 -std=c++2a -fno-char8_t -O3 -march=native -fmax-errors=5 )
-SET (LIBS ${LIBS}   dsr_core dsr_gui dsr_api fastcdr fastrtps osgDB OpenThreads Eigen3::Eigen realsense2)
+SET (LIBS ${LIBS}   dsr_core dsr_gui dsr_api fastcdr fastrtps osgDB OpenThreads realsense2)
+
+# SET (LIBS ${LIBS}  )
 
 

@@ -1,0 +1,96 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-294f7ae881fb99368087.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8"
+					},
+					"projectIndex" : 0,
+					"source" : "."
+				},
+				{
+					"build" : "src",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-src-dacb504fde7ae7b6107b.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "src",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"name" : "",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0,
+						1
+					],
+					"name" : "agent_three_cameras",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 1,
+					"id" : "ICES__home_pioneernuc_robocomp_components_melexcar_agents_agent_multicapa_laser_src::@145eef247bfb46b6828c",
+					"jsonFile" : "target-ICES__home_pioneernuc_robocomp_components_melexcar_agents_agent_multicapa_laser_src-b007ff562301bf9e6ffb.json",
+					"name" : "ICES__home_pioneernuc_robocomp_components_melexcar_agents_agent_multicapa_laser_src",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "agent_three_cameras::@145eef247bfb46b6828c",
+					"jsonFile" : "target-agent_three_cameras-11c05681b8b38180d3d9.json",
+					"name" : "agent_three_cameras",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "agent_three_cameras_autogen::@145eef247bfb46b6828c",
+					"jsonFile" : "target-agent_three_cameras_autogen-cc79559335e5a1e71d8a.json",
+					"name" : "agent_three_cameras_autogen",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/pioneernuc/robocomp/components/melexcar/agents/agent_multicapa_laser",
+		"source" : "/home/pioneernuc/robocomp/components/melexcar/agents/agent_multicapa_laser"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

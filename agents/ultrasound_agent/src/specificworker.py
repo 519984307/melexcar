@@ -44,7 +44,7 @@ from pydsr import *
 class SpecificWorker(GenericWorker):
     def __init__(self, proxy_map, startup_check=False):
         super(SpecificWorker, self).__init__(proxy_map)
-        self.Period = 20
+        self.Period = 30
         self.ini =True
         self.sensores = None
        # with Manager() as manager:
@@ -54,12 +54,12 @@ class SpecificWorker(GenericWorker):
         # creamos procesos de comunicación por socket
         p = Process(target=self.com_socket, args=('192.168.50.40', 2001, self.sensores))
         p2 = Process(target=self.com_socket, args=('192.168.50.41', 2001, self.sensores))
-        #p3 = Process(target=self.com_socket, args=('192.168.50.42', 2002, self.sensores))
+        p3 = Process(target=self.com_socket, args=('192.168.50.42', 2002, self.sensores))
         # self.p2 = Process(target=self.com_socket, args=('192', 2001, self.sensores))
         # arrancamos los procesos
         p.start()
         p2.start()
-        #p3.start()
+        p3.start()
 
 
         # YOU MUST SET AN UNIQUE ID FOR THIS AGENT IN YOUR DEPLOYMENT. "_CHANGE_THIS_ID_" for a valid unique integer
@@ -110,9 +110,9 @@ class SpecificWorker(GenericWorker):
             else:
             '''
 
-        print('sensores =', self.sensores)
+
         for sensor in self.sensores:
-            if 'Ultra' in sensor:
+            if 'Ultra' in sensor or "Lidar":
                 self.update_ultras_nodes(sensor)
 
 
@@ -123,15 +123,18 @@ class SpecificWorker(GenericWorker):
         QTimer.singleShot(200, QApplication.instance().quit)
 
     def update_ultras_nodes(self, ultra_sensor_name):
-        print(ultra_sensor_name)
+        print(ultra_sensor_name, self.sensores[ultra_sensor_name])
+        dist = None
         distancia = self.sensores[ultra_sensor_name][0]
         try:
             if ultra_node := self.g.get_node(ultra_sensor_name):
-                if float(distancia) > 3500 or distancia == 'NaN':
-                    ultra_node.attrs['ultrasound_distance'] = Attribute(3500.0, self.agent_id)
+                if float(distancia) > 3500 or distancia == 'NaN' or float(distancia) < 350:
+                    dist = 3500.0
                 else:
-                    ultra_node.attrs['ultrasound_distance'] = Attribute(float(distancia), self.agent_id)
+                    dist = float(distancia)
+                ultra_node.attrs['ultrasound_distance'] = Attribute(float(dist), self.agent_id)
                 self.g.update_node(ultra_node)
+                #print(ultra_sensor_name, dist)
         except:
             print("No Existe el Nodo", ultra_sensor_name)
 

@@ -230,7 +230,7 @@ class SpecificWorker(GenericWorker):
 
         print("Mapx: ", self.mapx, "mm Mapy: ", self.mapy, " mm")
         print("alpha (º): ", self.alpha, "radianes =", np.radians(self.alpha))
-        if self.alpha > 7:
+        if abs(self.alpha) > 10:
             print("SE HA IDO")
             self.cont_error += 1
         print("speed: m/s", self.speed)

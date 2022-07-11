@@ -203,14 +203,29 @@ void SpecificWorker::compute()
 {
     QPolygonF laserpoly;
     QPolygonF lasercomplete;
+    QPolygonF ultrasound_left_front;
+    QPolygonF ultrasound_right_front;
+    QPolygonF ultrasound_right_side;
+    QPolygonF ultrasound_left_side;
+    std::vector<QPolygonF> us_polys;
+    read_ultrasounds(distances_name, us_polys);
 
+    //read_ultrasound("Ultra_left_front", ultrasound_left_front);
+    //read_ultrasound("Ultra_right_front", ultrasound_right_front);
+    //read_ultrasound("Ultra_left_side", ultrasound_left_side);
+    //read_ultrasound("Ultra_right_side", ultrasound_right_side);
     read_laser(front_laser_id, laser_front_name, laserpoly); // 0-179
     read_laser(right_laser_id, laser_right_name, laserpoly); // 0-86
     read_laser(back_laser_id, laser_back_name, laserpoly); // 0 - 86
     read_laser(left_laser_id, laser_left_name, laserpoly); // 0 - 86
-
+    //us_poly = {ultrasound_right_side, ultrasound_left_side, ultrasound_right_front, ultrasound_left_front};
     laser_integrator(laserpoly, lasercomplete);
     draw_laser(lasercomplete);
+    draw_us(us_polys);
+    //draw_us(ultrasound_left_front);
+    //draw_us(ultrasound_left_side);
+    //draw_us(ultrasound_right_front);
+
     read_battery();
     read_cords();
     read_odometry();
@@ -308,6 +323,66 @@ void SpecificWorker::read_laser(std::uint64_t id, const std::string laser_name, 
         }
     }
 }
+void SpecificWorker::read_ultrasound(const std::string ultrasound_name, QPolygonF &us_poly)
+{
+    if(auto us_node = G->get_node(ultrasound_name); us_node.has_value())
+    {
+        auto dist = G->get_attrib_by_name<ultrasound_distance_att>(us_node.value());
+        if (dist.has_value())
+        {
+            const auto &d = dist.value();
+
+            QPolygonF laser_poly;
+            auto inner = G->get_inner_eigen_api();
+            auto aux3 = inner -> transform(robot_name, Eigen::Vector3d(0.f, 0.f, 0.f), ultrasound_name);
+            us_poly << QPointF(aux3.value().x(), aux3.value().y());
+
+            float x_1 = d * sin((-5) * (M_PI/180)), y_1 = d * cos((-5)* (M_PI/180));
+            auto aux1 = inner->transform(robot_name, Eigen::Vector3d(x_1, y_1, 0.f), ultrasound_name);
+            us_poly << QPointF(aux1.value().x(), aux1.value().y());
+            //us_poly << QPointF(aux1.value().x(), aux1.value().y());
+
+            float x_2 = d * sin((5) * (M_PI/180)), y_2 = d * cos((5) * (M_PI/180) );
+            auto aux2 = inner->transform(robot_name, Eigen::Vector3d(x_2, y_2, 0.f), ultrasound_name);
+            us_poly << QPointF(aux2.value().x(), aux2.value().y());
+
+
+            //us_poly << QPointF(0, 0);
+        }
+    }
+}
+
+void SpecificWorker::read_ultrasounds(const std::vector<std::string> distances_name, std::vector<QPolygonF> &sensor_poly)
+{
+    for (std::string sensor_name : distances_name ){
+        QPolygonF us_poly;
+        if(auto us_node = G->get_node(sensor_name); us_node.has_value())
+        {
+            auto dist = G->get_attrib_by_name<ultrasound_distance_att>(us_node.value());
+            if (dist.has_value())
+            {
+                const auto &d = dist.value();
+
+                auto inner = G->get_inner_eigen_api();
+                auto aux3 = inner -> transform(robot_name, Eigen::Vector3d(0.f, 0.f, 0.f), sensor_name);
+                us_poly << QPointF(aux3.value().x(), aux3.value().y());
+
+                float x_1 = d * sin((-5) * (M_PI/180)), y_1 = d * cos((-5)* (M_PI/180));
+                auto aux1 = inner->transform(robot_name, Eigen::Vector3d(x_1, y_1, 0.f), sensor_name);
+                us_poly << QPointF(aux1.value().x(), aux1.value().y());
+                //us_poly << QPointF(aux1.value().x(), aux1.value().y());
+
+                float x_2 = d * sin((5) * (M_PI/180)), y_2 = d * cos((5) * (M_PI/180) );
+                auto aux2 = inner->transform(robot_name, Eigen::Vector3d(x_2, y_2, 0.f), sensor_name);
+                us_poly << QPointF(aux2.value().x(), aux2.value().y());
+
+                sensor_poly.push_back(us_poly);
+                //us_poly << QPointF(0, 0);
+            }
+        }
+    }
+
+}
 
 void SpecificWorker::draw_laser(QPolygonF &laserpoly)
 {
@@ -320,6 +395,34 @@ void SpecificWorker::draw_laser(QPolygonF &laserpoly)
     color.setAlpha(40);
     laser_polygon = local_view->scene.addPolygon(laserpoly, QPen(QColor("DarkGreen"), 30), QBrush(color));
     laser_polygon->setZValue(3);
+}
+
+void SpecificWorker::draw_us(std::vector<QPolygonF> us_poly)
+{
+    //static QGraphicsItem *us_polygon = nullptr;
+    static std::vector<QGraphicsItem *> us_polygons;
+    for (QGraphicsItem* item : us_polygons)
+    {
+        local_view->scene.removeItem(item);
+        delete item;
+    }
+    us_polygons.clear();
+
+    for (QPolygonF ultra : us_poly ){
+        QColor color("red");
+        color.setAlpha(40);
+        us_polygons.push_back(local_view->scene.addPolygon(ultra, QPen(QColor("red"), 30), QBrush(color)));
+        us_polygons.back() ->setZValue(3);
+    }
+
+    //if (us_polygon != nullptr)
+      //  cout << "BORRA" << endl;
+        //local_view->scene.removeItem(us_polygon);
+
+    //QColor color("red");
+    //color.setAlpha(40);
+    //us_polygon = local_view->scene.addPolygon(us_poly, QPen(QColor("red"), 30), QBrush(color));
+    //us_polygon->setZValue(3);
 }
 
 void SpecificWorker::laser_integrator(QPolygonF laserpoly, QPolygonF &lasercomplete)

@@ -20,6 +20,8 @@
 #
 import math
 import os
+import time
+
 from PySide2.QtCore import QTimer
 from PySide2.QtWidgets import QApplication
 from rich.console import Console
@@ -43,7 +45,7 @@ from pydsr import *
 class SpecificWorker(GenericWorker):
     def __init__(self, proxy_map, startup_check=False):
         super(SpecificWorker, self).__init__(proxy_map)
-        self.Period = 25
+        self.Period = 0
 
         # YOU MUST SET AN UNIQUE ID FOR THIS AGENT IN YOUR DEPLOYMENT. "_CHANGE_THIS_ID_" for a valid unique integer
         self.agent_id = 5
@@ -76,7 +78,7 @@ class SpecificWorker(GenericWorker):
         self.SERVER_PORT_ROVER = 502  # puerto para las comunicaciones modbus tcp
 
         self.ROVER = ModbusClient()
-
+        self.count_distances = 0
         # define modbus server host, port
         self.ROVER.host(self.SERVER_HOST_ROVER)
         self.ROVER.port(self.SERVER_PORT_ROVER)
@@ -124,31 +126,48 @@ class SpecificWorker(GenericWorker):
     @QtCore.Slot()
     def compute(self):
         print('SpecificWorker.compute...')
-        #response = os.system("ping -c 1 " + self.hostname)
+        now = time.time()
+        total = now
+        response = os.system("ping -c 1 " + '192.168.50.144')
+        print("PIN", time.time() - now)
         # and then check the response...
-        print("MARCHA", self.ROVER.read_holding_registers(3))
+        # self.ROVER.read_holding_registers(3)
         response = 0
+
+        now = time.time()
+        # self.read_ultra()
+        self.frenado = False
+        print("READ ULTRA", time.time() - now)
+
+        now = time.time()
         if response == 0:
-            print(self.ROVER.read_holding_registers(self.MAP_SEGURIDAD))
+            #print(self.ROVER.read_holding_registers(self.MAP_SEGURIDAD))
             if self.ROVER.read_holding_registers(self.MAP_SEGURIDAD) == [0]:
                 self.ROVER.write_single_register(self.MAP_SEGURIDAD, 1)
-                print(self.hostname, 'is up!')
+                #print(self.hostname, 'is up!')
             self.set_movement()
+            print("SET_MOVEMENT", time.time() - now)
         else:
-            print(self.hostname, 'down')
+            #print(self.hostname, 'down')
             self.ROVER.write_single_register(self.MAP_SEGURIDAD, 0)
             conex = False
+
+        now = time.time()
         self.read_odometry()
+        print("ODOMATRY", time.time() - now)
         ####################################### PROBAR ###############################################
+
+        now = time.time()
         if self.ROVER.read_holding_registers(8) == [0] and self.advance < 0:
             self.ROVER.write_single_register(self.MAP_CAMBIO, 2)
             self.atras = -1
         elif self.ROVER.read_holding_registers(8) == [0] and self.advance > 0:
             self.ROVER.write_single_register(self.MAP_CAMBIO, 1)
             self.atras = 1
-        self.send_json()
+        #self.send_json()
+        print("REGISTERS 2", time.time() - now)
 
-
+        print("TOTAL", time.time() - total)
 
 
 
@@ -190,19 +209,58 @@ class SpecificWorker(GenericWorker):
             UTMy = "Error"
         if odometry:
             velocidad = odometry.attrs['odometry_vel'].value
-        data =json.dumps( {'Melex1':[{"Ocupado":ocupado, "Velocidad": velocidad,"CargaBatería":carga, "Coordenadas":[{ "Latitud": latitud, "Longitud":longitud, "UTMx": UTMx, "UTMy": UTMy}] }] })
+        data =json.dumps({
+            'Melex1': [{
+                "Ocupado": ocupado,
+                 "Velocidad": velocidad,
+                 "CargaBatería": carga,
+                 "Coordenadas": [{
+                     "Latitud": latitud,
+                      "Longitud": longitud,
+                      "UTMx": UTMx,
+                      "UTMy": gps.attrs["gps_UTMy"].value if gps else "error"
+                      }]
+                 }]
+        })
+
         with open('json_data.json', 'w') as outfile:
             outfile.write(data)
         outfile.close()
 
     def read_ultra(self):
-        ultra_left_front = self.g.get_node('ultra_left_front')
-        ultra_right_front = self.g.get_node('ultra_right_front')
-        if ultra_left_front and ultra_right_front:
-            right_front_dist = ultra_right_front.attrs['ultrasound_distance']
-            left_front_dist = ultra_left_front.attrs['ultrasound_distances']
-        if right_front_dist <= 1800.0 or left_front_dist <=1800.0:
+        nodes = ["Ultra_left_side", "Ultra_left_front", "Ultra_right_front", "Ultra_right_side", "Lidar_front", "Lidar_right_front", "Lidar_left_front"]
+
+        freno, count = False, 0
+        for name in nodes:
+            if node := self.g.get_node(name):
+                dist = node.attrs['ultrasound_distance'].value
+                if dist <= 1800.0:
+                    freno |= True
+        if freno:
             self.frenado = True
+            self.count_distances = 0
+        elif self.count_distances == 40:
+            self.frenado = False
+        else:
+            self.count_distances += 1
+        print("F", self.frenado, "C", self.count_distances)
+
+
+        # ultra_left_front = self.g.get_node('Ultra_left_front')
+        # ultra_right_front = self.g.get_node('Ultra_right_front')
+        # if ultra_left_front and ultra_right_front:
+        #     right_front_dist = ultra_right_front.attrs['ultrasound_distance'].value
+        #     left_front_dist = ultra_left_front.attrs['ultrasound_distance'].value
+        # if right_front_dist <= 1800.0 or left_front_dist <=1800.0:
+        #     self.frenado = True
+        #     self.count_distances = 0
+        # else:
+        #     if self.count_distances >40:
+        #         self.frenado = False
+        #     self.count_distances +=1
+        #     print("CONTADOR",self.count_distances)
+        # print("FRENOOO", self.frenado)
+
     def set_movement(self):
         robot = self.g.get_node('robot')
         if robot:
@@ -216,7 +274,7 @@ class SpecificWorker(GenericWorker):
             if self.frenado:
                 if self.ROVER.is_open():
                     self.ROVER.write_single_register(self.MAP_VELOCIDAD, int(0))
-                    self.ROVER.write_single_register(self.MAP_FRENO, int(1000))
+                    self.ROVER.write_single_register(self.MAP_FRENO, int(9000))
             else:
                 ACELERADOR = (self.atras * self.advance * self.max_melex_adv) / 1.3
                 FRENO = self.brake
